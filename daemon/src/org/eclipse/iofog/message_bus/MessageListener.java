@@ -12,9 +12,9 @@
  *******************************************************************************/
 package org.eclipse.iofog.message_bus;
 
+import org.apache.activemq.artemis.api.core.client.ClientMessage;
+import org.apache.activemq.artemis.api.core.client.MessageHandler;
 import org.eclipse.iofog.local_api.MessageCallback;
-import org.hornetq.api.core.client.ClientMessage;
-import org.hornetq.api.core.client.MessageHandler;
 
 import static org.eclipse.iofog.utils.logging.LoggingService.logWarning;
 
@@ -24,7 +24,7 @@ import static org.eclipse.iofog.utils.logging.LoggingService.logWarning;
  * @author saeid
  *
  */
-public class MessageListener implements MessageHandler{
+public class MessageListener implements MessageHandler {
 	private static final String MODULE_NAME = "MessageListener";
 
 	private final MessageCallback callback;

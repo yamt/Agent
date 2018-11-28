@@ -12,24 +12,24 @@
  *******************************************************************************/
 package org.eclipse.iofog.message_bus;
 
+import org.apache.activemq.artemis.api.core.ActiveMQException;
+import org.apache.activemq.artemis.api.core.RoutingType;
+import org.apache.activemq.artemis.api.core.SimpleString;
+import org.apache.activemq.artemis.api.core.TransportConfiguration;
+import org.apache.activemq.artemis.api.core.client.*;
+import org.apache.activemq.artemis.core.config.impl.ConfigurationImpl;
+import org.apache.activemq.artemis.core.remoting.impl.invm.InVMAcceptorFactory;
+import org.apache.activemq.artemis.core.remoting.impl.invm.InVMConnectorFactory;
+import org.apache.activemq.artemis.core.remoting.impl.netty.NettyAcceptorFactory;
+import org.apache.activemq.artemis.core.server.ActiveMQServer;
+import org.apache.activemq.artemis.core.server.ActiveMQServers;
+import org.apache.activemq.artemis.core.server.JournalType;
+import org.apache.activemq.artemis.core.settings.impl.AddressFullMessagePolicy;
+import org.apache.activemq.artemis.core.settings.impl.AddressSettings;
 import org.eclipse.iofog.microservice.Microservice;
 import org.eclipse.iofog.utils.Constants;
 import org.eclipse.iofog.utils.configuration.Configuration;
 import org.eclipse.iofog.utils.logging.LoggingService;
-import org.hornetq.api.core.HornetQException;
-import org.hornetq.api.core.SimpleString;
-import org.hornetq.api.core.TransportConfiguration;
-import org.hornetq.api.core.client.*;
-import org.hornetq.api.core.client.ClientSession.QueueQuery;
-import org.hornetq.core.config.impl.ConfigurationImpl;
-import org.hornetq.core.remoting.impl.invm.InVMAcceptorFactory;
-import org.hornetq.core.remoting.impl.invm.InVMConnectorFactory;
-import org.hornetq.core.remoting.impl.netty.NettyAcceptorFactory;
-import org.hornetq.core.server.HornetQServer;
-import org.hornetq.core.server.HornetQServers;
-import org.hornetq.core.server.JournalType;
-import org.hornetq.core.settings.impl.AddressFullMessagePolicy;
-import org.hornetq.core.settings.impl.AddressSettings;
 
 import java.util.HashMap;
 import java.util.HashSet;
@@ -37,7 +37,7 @@ import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 
 /**
- * HornetQ server
+ * ActiveMQ server
  * 
  * @author saeid
  *
@@ -46,7 +46,7 @@ public class MessageBusServer {
 	
 	private static final String MODULE_NAME = "Message Bus Server";
 	private ClientSessionFactory sf;
-	private HornetQServer server;
+	private ActiveMQServer server;
 	private static ClientSession messageBusSession;
 	private ClientConsumer commandlineConsumer;
 	private static ClientProducer commandlineProducer;
@@ -69,7 +69,7 @@ public class MessageBusServer {
 	}
 	
 	/**
-	 * starts HornetQ server 
+	 * starts ActiveMQ server
 	 * 
 	 * @throws Exception
 	 */
@@ -81,7 +81,7 @@ public class MessageBusServer {
 		addressSettings.setAddressFullMessagePolicy(AddressFullMessagePolicy.DROP);
 		String workingDirectory = Configuration.getDiskDirectory();
 
-        org.hornetq.core.config.Configuration configuration = new ConfigurationImpl();
+		org.apache.activemq.artemis.core.config.Configuration configuration = new ConfigurationImpl();
         configuration.setJournalDirectory(workingDirectory + "messages/journal");
         configuration.setCreateJournalDir(true);
 		configuration.setJournalType(JournalType.NIO);
@@ -102,10 +102,10 @@ public class MessageBusServer {
         transportConfig.add(new TransportConfiguration(InVMAcceptorFactory.class.getName()));
         
 		configuration.setAcceptorConfigurations(transportConfig);
-		server = HornetQServers.newHornetQServer(configuration);
+		server = ActiveMQServers.newActiveMQServer(configuration);
 		server.start();
 
-        serverLocator = HornetQClient.createServerLocatorWithoutHA(new TransportConfiguration(InVMConnectorFactory.class.getName()));
+        serverLocator = ActiveMQClient.createServerLocatorWithoutHA(new TransportConfiguration(InVMConnectorFactory.class.getName()));
 
         serverLocator.setUseGlobalPools(false);
         serverLocator.setScheduledThreadPoolMaxSize(10);
@@ -121,14 +121,14 @@ public class MessageBusServer {
 	 */
 	void initialize() throws Exception {
 		messageBusSession = sf.createSession(true, true, 0);
-		QueueQuery queueQuery = messageBusSession.queueQuery(new SimpleString(Constants.address));
+		ClientSession.QueueQuery queueQuery = messageBusSession.queueQuery(new SimpleString(Constants.address));
 		if (queueQuery.isExists())
 			messageBusSession.deleteQueue(Constants.address);
 		queueQuery = messageBusSession.queueQuery(new SimpleString(Constants.commandlineAddress));
 		if (queueQuery.isExists())
 			messageBusSession.deleteQueue(Constants.commandlineAddress);
-		messageBusSession.createQueue(Constants.address, Constants.address, false);
-		messageBusSession.createQueue(Constants.commandlineAddress, Constants.commandlineAddress, false);
+		messageBusSession.createQueue(Constants.address, RoutingType.ANYCAST, Constants.address, false);
+		messageBusSession.createQueue(Constants.commandlineAddress, RoutingType.ANYCAST, Constants.commandlineAddress, false);
 
 		commandlineProducer = messageBusSession.createProducer(Constants.commandlineAddress);
 		
@@ -227,7 +227,7 @@ public class MessageBusServer {
 	}
 
 	/**
-	 * stops all consumers, producers and HornetQ server
+	 * stops all consumers, producers and ActiveMQ server
 	 * 
 	 * @throws Exception
 	 */
@@ -237,7 +237,7 @@ public class MessageBusServer {
 			consumers.forEach((key, value) -> {
 				try {
 					value.close();
-				} catch (HornetQException e) {
+				} catch (ActiveMQException e) {
 					LoggingService.logInfo(MODULE_NAME, e.getMessage());
 				}
 			});
@@ -247,7 +247,7 @@ public class MessageBusServer {
 			producers.forEach((key, value) -> {
 				try {
 					value.close();
-				} catch (HornetQException e) {
+				} catch (ActiveMQException e) {
 					LoggingService.logInfo(MODULE_NAME, e.getMessage());
 				}
 			});
@@ -261,7 +261,7 @@ public class MessageBusServer {
 	}
 
 	/**
-	 * sets memory usage limit of HornetQ server
+	 * sets memory usage limit of ActiveMQ server
 	 * 
 	 */
 	void setMemoryLimit() {

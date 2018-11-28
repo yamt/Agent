@@ -172,7 +172,7 @@ public class MessageBus implements IOFogModule {
     };
 
     /**
-     * monitors HornetQ server
+     * monitors ActiveMQ server
      */
     private final Runnable checkMessageServerStatus = () -> {
         while (true) {
@@ -300,7 +300,7 @@ public class MessageBus implements IOFogModule {
     }
 
     /**
-     * sets  memory usage limit of HornetQ
+     * sets  memory usage limit of ActiveMQ
      * {@link Configuration} calls this method when any changes applied
      */
     public void instanceConfigUpdated() {
@@ -336,7 +336,7 @@ public class MessageBus implements IOFogModule {
     }
 
     /**
-     * closes receivers and publishers and stops HornetQ server
+     * closes receivers and publishers and stops ActiveMQ server
      */
     public void stop() {
         for (MessageReceiver receiver : receivers.values())
