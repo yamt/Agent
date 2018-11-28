@@ -434,7 +434,7 @@ public class FieldAgent implements IOFogModule {
         microserviceManager.setConfigs(configs);
     }
 
-    private List<Route> parseRoutesJson(JsonArray routesJson) {
+    private Map<String, Route> parseRoutesJson(JsonArray routesJson) {
         return IntStream.range(0, routesJson.size())
                .boxed()
                .map(routesJson::getJsonObject)
@@ -449,7 +449,7 @@ public class FieldAgent implements IOFogModule {
                    List<Receiver> receivers = parseReceiversJson(routeJson);
                    return new Route(producer, receivers);
                })
-               .collect(toList());
+               .collect(toMap(route -> route.getProducer().getMicroserviceId(), Function.identity()));
     }
 
     private List<Receiver> parseReceiversJson(JsonObject jsonObject) {
@@ -470,7 +470,7 @@ public class FieldAgent implements IOFogModule {
     }
 
     private RouteConfig parseRouteConfigJson(JsonObject jsonObject) {
-        JsonObject routeConfigJson = jsonObject.getJsonObject("config");
+        JsonObject routeConfigJson = jsonObject.getJsonObject("routeConfig");
         String host = routeConfigJson.getString("host");
         int port = routeConfigJson.getInt("port");
         String user = routeConfigJson.getString("user");
@@ -498,9 +498,7 @@ public class FieldAgent implements IOFogModule {
                 JsonObject result = orchestrator.request("routes", RequestType.GET, null, null);
                 routesJson = result.getJsonArray("routes");
             }
-            List<Route> routes = parseRoutesJson(routesJson);
-            Map<String, Route> routesMap = routes.stream()
-                .collect(toMap(route -> route.getProducer().getMicroserviceId(), Function.identity()));
+            Map<String, Route> routesMap = parseRoutesJson(routesJson);
             microserviceManager.setRoutes(routesMap);
         } catch (CertificateException | SSLHandshakeException e) {
             verificationFailed();
@@ -566,34 +564,6 @@ public class FieldAgent implements IOFogModule {
             microservice.setLogSize(jsonObj.getJsonNumber("logSize").longValue());
             microservice.setDelete(jsonObj.getBoolean("delete"));
             microservice.setDeleteWithCleanup(jsonObj.getBoolean("deleteWithCleanup"));
-
-            JsonValue routesValue = jsonObj.get("routes");
-            if (!routesValue.getValueType().equals(JsonValue.ValueType.NULL)) {
-                JsonArray routesObj = (JsonArray) routesValue;
-                List<Receiver> routes = routesObj.size() > 0
-                        ? IntStream.range(0, routesObj.size())
-                        .boxed()
-                        .map(i -> {
-                            JsonObject routeObj = routesObj.getJsonObject(i);
-                            String microserviceUuid = routeObj.getString("microserviceUuid");
-                            boolean isLocal = routeObj.getBoolean("isLocal");
-                            RouteConfig routeConfig = null;
-                            if (!isLocal) {
-                                JsonObject routeConfigObj = routeObj.getJsonObject("config");
-                                String host = routeConfigObj.getString("host");
-                                int port = routeConfigObj.getInt("port");
-                                String user = routeConfigObj.getString("user");
-                                String password = routeConfigObj.getString("password");
-                                String passKey = routeConfigObj.getString("passKey");
-                                routeConfig = new RouteConfig(host, port, user, password, passKey);
-                            }
-                            return new Receiver(microserviceUuid, isLocal, routeConfig);
-                        })
-                        .collect(toList())
-                        : null;
-
-                microservice.setRoutes(routes);
-            }
 
             JsonValue portMappingValue = jsonObj.get("portMappings");
             if (!portMappingValue.getValueType().equals(JsonValue.ValueType.NULL)) {
