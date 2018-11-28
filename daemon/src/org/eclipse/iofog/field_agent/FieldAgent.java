@@ -52,6 +52,7 @@ import static io.netty.util.internal.StringUtil.isNullOrEmpty;
 import static java.nio.charset.StandardCharsets.UTF_8;
 import static java.nio.file.LinkOption.NOFOLLOW_LINKS;
 import static java.util.stream.Collectors.toList;
+import static java.util.stream.Collectors.toMap;
 import static org.eclipse.iofog.command_line.CommandLineConfigParam.*;
 import static org.eclipse.iofog.field_agent.VersionHandler.isReadyToRollback;
 import static org.eclipse.iofog.field_agent.VersionHandler.isReadyToUpgrade;
@@ -272,22 +273,19 @@ public class FieldAgent implements IOFogModule {
                         loadRegistries(false);
                         ProcessManager.getInstance().update();
                     }
-                    if (changes.getBoolean("microserviceConfig") || changes.getBoolean("microserviceList") ||
-                            changes.getBoolean("routing") || initialization) {
+                    if (changes.getBoolean("microserviceConfig") || changes.getBoolean("microserviceList") || initialization) {
                         boolean microserviceConfig = changes.getBoolean("microserviceConfig");
-                        boolean routing = changes.getBoolean("routing");
 
                         List<Microservice> microservices = loadMicroservices(false);
 
                         if (microserviceConfig) {
                             processMicroserviceConfig(microservices);
+                            LocalApi.getInstance().update();
                         }
-
-                        if (routing) {
-                            processRoutes(microservices);
-                        }
-
-                        LocalApi.getInstance().update();
+                    }
+                    if (changes.getBoolean("routing") || initialization) {
+                        loadRoutes(false);
+                        MessageBus.getInstance().update();
                     }
                     if (changes.getBoolean("tunnel") && !initialization) {
                         sshProxyManager.update(getProxyConfig());
@@ -436,28 +434,79 @@ public class FieldAgent implements IOFogModule {
         microserviceManager.setConfigs(configs);
     }
 
-    /**
-     * gets list of Microservice routings from file or IOFog controller
-     */
-    private void processRoutes(List<Microservice> microservices) {
-        Map<String, Route> routes = new HashMap<>();
-        for (Microservice microservice : microservices) {
-            List<String> jsonRoutes = microservice.getRoutes();
-            if (jsonRoutes == null || jsonRoutes.size() == 0) {
-                continue;
-            }
+    private List<Route> parseRoutesJson(JsonArray routesJson) {
+        return IntStream.range(0, routesJson.size())
+               .boxed()
+               .map(routesJson::getJsonObject)
+               .map(routeJson -> {
+                   String producerMicroserviceUuid = routeJson.getString("microserviceUuid");
+                   boolean isLocalPublisher = routeJson.getBoolean("isLocal");
+                   RouteConfig publisherRouteConfig = null;
+                   if (!isLocalPublisher) {
+                       publisherRouteConfig = parseRouteConfigJson(routeJson);
+                   }
+                   Producer producer = new Producer(producerMicroserviceUuid, isLocalPublisher, publisherRouteConfig);
+                   List<Receiver> receivers = parseReceiversJson(routeJson);
+                   return new Route(producer, receivers);
+               })
+               .collect(toList());
+    }
 
-            String microserviceId = microservice.getMicroserviceUuid();
-            Route microserviceRoute = new Route();
+    private List<Receiver> parseReceiversJson(JsonObject jsonObject) {
+        JsonArray receiversJson = jsonObject.getJsonArray("receivers");
+        return IntStream.range(0 , receiversJson.size())
+                .boxed()
+                .map(receiversJson::getJsonObject)
+                .map(receiverJson -> {
+                    String receiver = receiverJson.getString("microserviceUuid");
+                    boolean isLocalReceiver = receiverJson.getBoolean("isLocal");
+                    RouteConfig receiverRouteConfig = null;
+                    if (!isLocalReceiver) {
+                        receiverRouteConfig = parseRouteConfigJson(receiverJson);
+                    }
+                    return new Receiver(receiver, isLocalReceiver, receiverRouteConfig);
+                })
+                .collect(toList());
+    }
 
-            for (String jsonRoute : jsonRoutes) {
-                microserviceRoute.getReceivers().add(jsonRoute);
-            }
+    private RouteConfig parseRouteConfigJson(JsonObject jsonObject) {
+        JsonObject routeConfigJson = jsonObject.getJsonObject("config");
+        String host = routeConfigJson.getString("host");
+        int port = routeConfigJson.getInt("port");
+        String user = routeConfigJson.getString("user");
+        String password = routeConfigJson.getString("password");
+        String passKey = routeConfigJson.getString("passKey");
+        return new RouteConfig(host, port, user, password, passKey);
+    }
 
-            routes.put(microserviceId, microserviceRoute);
+    private void loadRoutes(boolean fromFile) {
+        logInfo("loading routes...");
+        if (notProvisioned() || !isControllerConnected(fromFile)) {
+            return;
         }
 
-        microserviceManager.setRoutes(routes);
+        String filename = "routes.json";
+        JsonArray routesJson;
+        try {
+            if (fromFile) {
+                routesJson = readFile(filesPath + filename);
+                if (routesJson == null) {
+                    JsonObject result = orchestrator.request("routes", RequestType.GET, null, null);
+                    routesJson = result.getJsonArray("routes");
+                }
+            } else {
+                JsonObject result = orchestrator.request("routes", RequestType.GET, null, null);
+                routesJson = result.getJsonArray("routes");
+            }
+            List<Route> routes = parseRoutesJson(routesJson);
+            Map<String, Route> routesMap = routes.stream()
+                .collect(toMap(route -> route.getProducer().getMicroserviceId(), Function.identity()));
+            microserviceManager.setRoutes(routesMap);
+        } catch (CertificateException | SSLHandshakeException e) {
+            verificationFailed();
+        } catch (Exception e) {
+            logWarning("Unable to get routes: " + e.getMessage());
+        }
     }
 
     /**
@@ -521,10 +570,25 @@ public class FieldAgent implements IOFogModule {
             JsonValue routesValue = jsonObj.get("routes");
             if (!routesValue.getValueType().equals(JsonValue.ValueType.NULL)) {
                 JsonArray routesObj = (JsonArray) routesValue;
-                List<String> routes = routesObj.size() > 0
+                List<Receiver> routes = routesObj.size() > 0
                         ? IntStream.range(0, routesObj.size())
                         .boxed()
-                        .map(routesObj::getString)
+                        .map(i -> {
+                            JsonObject routeObj = routesObj.getJsonObject(i);
+                            String microserviceUuid = routeObj.getString("microserviceUuid");
+                            boolean isLocal = routeObj.getBoolean("isLocal");
+                            RouteConfig routeConfig = null;
+                            if (!isLocal) {
+                                JsonObject routeConfigObj = routeObj.getJsonObject("config");
+                                String host = routeConfigObj.getString("host");
+                                int port = routeConfigObj.getInt("port");
+                                String user = routeConfigObj.getString("user");
+                                String password = routeConfigObj.getString("password");
+                                String passKey = routeConfigObj.getString("passKey");
+                                routeConfig = new RouteConfig(host, port, user, password, passKey);
+                            }
+                            return new Receiver(microserviceUuid, isLocal, routeConfig);
+                        })
                         .collect(toList())
                         : null;
 
@@ -873,7 +937,7 @@ public class FieldAgent implements IOFogModule {
             loadRegistries(false);
             List<Microservice> microservices = loadMicroservices(false);
             processMicroserviceConfig(microservices);
-            processRoutes(microservices);
+            loadRoutes(false);
             notifyModules();
 
             sendHWInfoFromHalToController();
@@ -967,7 +1031,7 @@ public class FieldAgent implements IOFogModule {
             loadRegistries(!isConnected);
             List<Microservice> microservices = loadMicroservices(!isConnected);
             processMicroserviceConfig(microservices);
-            processRoutes(microservices);
+            loadRoutes(!isConnected);
         }
 
         new Thread(pingController, "FieldAgent : Ping").start();

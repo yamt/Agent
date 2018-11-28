@@ -12,8 +12,11 @@
  *******************************************************************************/
 package org.eclipse.iofog.message_bus;
 
-import org.eclipse.iofog.microservice.Microservice;
+import org.eclipse.iofog.connector_client.ConnectorClient;
 import org.eclipse.iofog.local_api.MessageCallback;
+import org.eclipse.iofog.local_api.RemoteMessageCallback;
+import org.eclipse.iofog.microservice.Microservice;
+import org.eclipse.iofog.microservice.RouteConfig;
 import org.hornetq.api.core.client.ClientConsumer;
 import org.hornetq.api.core.client.ClientMessage;
 
@@ -32,14 +35,28 @@ public class MessageReceiver implements AutoCloseable{
 	private static final String MODULE_NAME = "MessageReceiver";
 
 	private final String name;
-
+	private boolean isLocal;
+	private RouteConfig routeConfig;
 	private MessageListener listener;
 	private final ClientConsumer consumer;
+	private ConnectorClient connectorClient;
 
-	public MessageReceiver(String name, ClientConsumer consumer) {
+	public MessageReceiver(String name, boolean isLocal, RouteConfig routeConfig, ClientConsumer consumer) {
 		this.name = name;
+		this.isLocal = isLocal;
 		this.consumer = consumer;
-		this.listener = null;
+		this.routeConfig = routeConfig;
+		if (!isLocal) {
+			this.connectorClient = new ConnectorClient(routeConfig);
+		}
+	}
+
+	public boolean isLocal() {
+		return isLocal;
+	}
+
+	public RouteConfig getRouteConfig() {
+		return routeConfig;
 	}
 
 	/**
@@ -91,7 +108,10 @@ public class MessageReceiver implements AutoCloseable{
 	void enableRealTimeReceiving() {
 		if (consumer == null || consumer.isClosed())
 			return;
-		listener = new MessageListener(new MessageCallback(name));
+		MessageCallback messageCallback = isLocal
+				? new MessageCallback(name)
+				: new RemoteMessageCallback(name, connectorClient);
+		listener = new MessageListener(messageCallback);
 		try {
 			consumer.setMessageHandler(listener);
 		} catch (Exception e) {
@@ -107,6 +127,9 @@ public class MessageReceiver implements AutoCloseable{
 		try {
 			if (consumer == null || listener == null || consumer.getMessageHandler() == null)
 				return;
+			if (!isLocal) {
+				connectorClient.closeProducer();
+			}
 			listener = null;
 			consumer.setMessageHandler(null);
 		} catch (Exception exp) {

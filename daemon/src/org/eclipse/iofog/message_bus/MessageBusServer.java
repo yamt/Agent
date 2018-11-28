@@ -12,11 +12,6 @@
  *******************************************************************************/
 package org.eclipse.iofog.message_bus;
 
-import java.util.HashMap;
-import java.util.HashSet;
-import java.util.Map;
-import java.util.concurrent.ConcurrentHashMap;
-
 import org.eclipse.iofog.microservice.Microservice;
 import org.eclipse.iofog.utils.Constants;
 import org.eclipse.iofog.utils.configuration.Configuration;
@@ -24,14 +19,8 @@ import org.eclipse.iofog.utils.logging.LoggingService;
 import org.hornetq.api.core.HornetQException;
 import org.hornetq.api.core.SimpleString;
 import org.hornetq.api.core.TransportConfiguration;
-import org.hornetq.api.core.client.ClientConsumer;
-import org.hornetq.api.core.client.ClientMessage;
-import org.hornetq.api.core.client.ClientProducer;
-import org.hornetq.api.core.client.ClientSession;
+import org.hornetq.api.core.client.*;
 import org.hornetq.api.core.client.ClientSession.QueueQuery;
-import org.hornetq.api.core.client.ClientSessionFactory;
-import org.hornetq.api.core.client.HornetQClient;
-import org.hornetq.api.core.client.ServerLocator;
 import org.hornetq.core.config.impl.ConfigurationImpl;
 import org.hornetq.core.remoting.impl.invm.InVMAcceptorFactory;
 import org.hornetq.core.remoting.impl.invm.InVMConnectorFactory;
@@ -41,6 +30,11 @@ import org.hornetq.core.server.HornetQServers;
 import org.hornetq.core.server.JournalType;
 import org.hornetq.core.settings.impl.AddressFullMessagePolicy;
 import org.hornetq.core.settings.impl.AddressSettings;
+
+import java.util.HashMap;
+import java.util.HashSet;
+import java.util.Map;
+import java.util.concurrent.ConcurrentHashMap;
 
 /**
  * HornetQ server
@@ -149,7 +143,7 @@ public class MessageBusServer {
 	 * @param name - ID of {@link Microservice}
 	 * @throws Exception
 	 */
-	void createCosumer(String name) throws Exception {
+	void createConsumer(String name) throws Exception {
 		if (consumers == null)
 			consumers = new ConcurrentHashMap<>();
 
@@ -166,7 +160,7 @@ public class MessageBusServer {
 	ClientConsumer getConsumer(String receiver) {
 		if (consumers == null || !consumers.containsKey(receiver))
 			try {
-				createCosumer(receiver);
+				createConsumer(receiver);
 			} catch (Exception e) {
 				return null;
 			}

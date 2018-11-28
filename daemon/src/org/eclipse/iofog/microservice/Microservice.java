@@ -25,7 +25,7 @@ public class Microservice {
     private final String imageName;
     private List<PortMapping> portMappings;
     private String config;
-    private List<String> routes;
+    private List<Receiver> routes;
     private String containerId;
     private String registry;
     private String containerIpAddress;
@@ -160,11 +160,11 @@ public class Microservice {
 		return microserviceUuid.hashCode();
 	}
 
-    public List<String> getRoutes() {
+    public List<Receiver> getRoutes() {
         return routes;
     }
 
-    public void setRoutes(List<String> routes) {
+    public void setRoutes(List<Receiver> routes) {
         this.routes = routes;
     }
 }

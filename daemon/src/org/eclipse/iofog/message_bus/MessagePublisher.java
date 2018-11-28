@@ -12,14 +12,18 @@
  *******************************************************************************/
 package org.eclipse.iofog.message_bus;
 
-import java.util.List;
-
+import org.eclipse.iofog.connector_client.ConnectorClient;
+import org.eclipse.iofog.connector_client.ConnectorMessageCallback;
+import org.eclipse.iofog.connector_client.ConnectorMessageListener;
 import org.eclipse.iofog.microservice.Microservice;
+import org.eclipse.iofog.microservice.Receiver;
 import org.eclipse.iofog.microservice.Route;
 import org.eclipse.iofog.utils.logging.LoggingService;
 import org.hornetq.api.core.client.ClientMessage;
 import org.hornetq.api.core.client.ClientProducer;
 import org.hornetq.api.core.client.ClientSession;
+
+import java.util.List;
 
 import static org.eclipse.iofog.message_bus.MessageBus.MODULE_NAME;
 import static org.eclipse.iofog.utils.logging.LoggingService.logWarning;
@@ -30,23 +34,39 @@ import static org.eclipse.iofog.utils.logging.LoggingService.logWarning;
  * @author saeid
  *
  */
-public class MessagePublisher implements AutoCloseable{
+public class MessagePublisher implements AutoCloseable {
 	private final MessageArchive archive;
-	private final String name;
+	private Route route;
 	private ClientProducer producer;
 	private ClientSession session;
-	private Route route;
-	
-	public MessagePublisher(String name, Route route, ClientProducer producer) {
-		this.archive = new MessageArchive(name);
+	private ConnectorClient connectorClient;
+
+	public MessagePublisher(Route route, ClientProducer producer) {
+		this.archive = new MessageArchive(route.getProducer().getMicroserviceId());
 		this.route = route;
-		this.name = name;
 		this.producer = producer;
 		this.session = MessageBusServer.getSession();
+		enableConnectorRealTimeReceiving();
 	}
-	
-	public String getName() {
-		return name;
+
+	public Route getRoute() {
+		return route;
+	}
+
+	public void setRoute(Route route) {
+		this.route = route;
+	}
+
+	private void enableConnectorRealTimeReceiving() {
+		if (!route.getProducer().isLocal() && producer != null && !producer.isClosed()) {
+			ConnectorMessageListener listener = new ConnectorMessageListener(new ConnectorMessageCallback());
+			connectorClient = new ConnectorClient(route.getProducer().getRouteConfig());
+			connectorClient.setMessageListener(listener);
+		}
+	}
+
+	private void disableConnectorRealTimeReceiving() {
+		connectorClient.closeConsumer();
 	}
 
 	/**
@@ -61,18 +81,39 @@ public class MessagePublisher implements AutoCloseable{
 		try {
 			archive.save(bytes, message.getTimestamp());
 		} catch (Exception e) {
-			LoggingService.logWarning("Message Publisher (" + this.name + ")", "unable to archive massage --> " + e.getMessage());
+			LoggingService.logWarning(
+				"Message Publisher (" + this.route.getProducer().getMicroserviceId() + ")",
+				"unable to archive massage --> " + e.getMessage()
+			);
 		}
-		for (String receiver : route.getReceivers()) {
+		for (Receiver receiver : route.getReceivers()) {
+			String name = receiver.getMicroserviceUuid();
 			ClientMessage msg = session.createMessage(false);
-			msg.putObjectProperty("receiver", receiver);
+			msg.putObjectProperty("receiver", name);
 			msg.putBytesProperty("message", bytes);
 			producer.send(msg);
 		}
 	}
 
 	synchronized void updateRoute(Route route) {
-		this.route = route;
+		if (!this.route.equals(route)) {
+			if (this.route.getProducer().isLocal() != route.getProducer().isLocal()) {
+				if (this.route.getProducer().isLocal()) {
+					this.route = route;
+					enableConnectorRealTimeReceiving();
+				} else {
+					disableConnectorRealTimeReceiving();
+					this.route = route;
+				}
+			}
+		} else if (!this.route.getProducer().isLocal()
+			&& !this.route.getProducer().getRouteConfig().equals(route.getProducer().getRouteConfig())) {
+			disableConnectorRealTimeReceiving();
+			this.route = route;
+			enableConnectorRealTimeReceiving();
+		} else {
+			this.route = route;
+		}
 	}
 
 	public synchronized void close() {

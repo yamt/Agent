@@ -12,13 +12,16 @@
  *******************************************************************************/
 package org.eclipse.iofog.message_bus;
 
-import java.util.ArrayList;
-import java.util.List;
-
 import org.eclipse.iofog.microservice.Microservice;
+import org.eclipse.iofog.microservice.Receiver;
 import org.eclipse.iofog.microservice.Route;
 import org.eclipse.iofog.status_reporter.StatusReporter;
 import org.eclipse.iofog.utils.logging.LoggingService;
+
+import java.util.ArrayList;
+import java.util.List;
+
+import static java.util.stream.Collectors.toList;
 
 public class MessageBusUtil {
 
@@ -45,7 +48,10 @@ public class MessageBusUtil {
 			try {
 				publisher.publish(message);
 			} catch (Exception e) {
-				LoggingService.logWarning("Message Publisher (" + publisher.getName() + ")", "unable to send message --> " + e.getMessage());
+				LoggingService.logWarning(
+					"Message Publisher (" + publisher.getRoute().getProducer().getMicroserviceId() + ")",
+					"unable to send message --> " + e.getMessage()
+				);
 			}
 		}
 	}
@@ -80,7 +86,10 @@ public class MessageBusUtil {
 	 */
 	public List<Message> messageQuery(String publisher, String receiver, long from, long to) {
 		Route route = messageBus.getRoutes().get(publisher); 
-		if (to < from || route == null || !route.getReceivers().contains(receiver))
+		if (to < from || route == null || !route.getReceivers().stream()
+			.map(Receiver::getMicroserviceUuid)
+			.collect(toList())
+			.contains(receiver))
 			return null;
 
 		MessagePublisher messagePublisher = messageBus.getPublisher(publisher);
