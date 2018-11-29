@@ -22,8 +22,8 @@ import org.apache.activemq.artemis.core.remoting.impl.invm.InVMAcceptorFactory;
 import org.apache.activemq.artemis.core.remoting.impl.invm.InVMConnectorFactory;
 import org.apache.activemq.artemis.core.remoting.impl.netty.NettyAcceptorFactory;
 import org.apache.activemq.artemis.core.server.ActiveMQServer;
-import org.apache.activemq.artemis.core.server.ActiveMQServers;
 import org.apache.activemq.artemis.core.server.JournalType;
+import org.apache.activemq.artemis.core.server.embedded.EmbeddedActiveMQ;
 import org.apache.activemq.artemis.core.settings.impl.AddressFullMessagePolicy;
 import org.apache.activemq.artemis.core.settings.impl.AddressSettings;
 import org.eclipse.iofog.microservice.Microservice;
@@ -91,7 +91,7 @@ public class MessageBusServer {
         configuration.setSecurityEnabled(false);
         configuration.setPagingDirectory(workingDirectory + "messages/paging");
         configuration.getAddressesSettings().put(Constants.ADDRESS, addressSettings);
-        
+
 		Map<String, Object> connectionParams = new HashMap<>();
 		connectionParams.put("port", 55555);
 		connectionParams.put("host", "localhost");
@@ -100,10 +100,11 @@ public class MessageBusServer {
         HashSet<TransportConfiguration> transportConfig = new HashSet<>();
 		transportConfig.add(nettyConfig);
         transportConfig.add(new TransportConfiguration(InVMAcceptorFactory.class.getName()));
-        
+
 		configuration.setAcceptorConfigurations(transportConfig);
-		server = ActiveMQServers.newActiveMQServer(configuration);
-		server.start();
+		EmbeddedActiveMQ embeddedActiveMQ = new EmbeddedActiveMQ();
+		embeddedActiveMQ.setConfiguration(configuration);
+		server = embeddedActiveMQ.start().getActiveMQServer();
 
         serverLocator = ActiveMQClient.createServerLocatorWithoutHA(new TransportConfiguration(InVMConnectorFactory.class.getName()));
 

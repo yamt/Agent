@@ -15,14 +15,14 @@ package org.eclipse.iofog;
 import org.eclipse.iofog.supervisor.Supervisor;
 import org.eclipse.iofog.utils.Constants;
 import org.eclipse.iofog.utils.configuration.Configuration;
-import org.eclipse.iofog.utils.configuration.ConfigurationItemException;
 import org.eclipse.iofog.utils.logging.LoggingService;
 
 import java.io.*;
 import java.net.HttpURLConnection;
 import java.net.URL;
-import static java.nio.charset.StandardCharsets.UTF_8;
 import java.text.ParseException;
+
+import static java.nio.charset.StandardCharsets.UTF_8;
 
 public class Daemon {
 	private static  final String MODULE_NAME = "MAIN_DAEMON";

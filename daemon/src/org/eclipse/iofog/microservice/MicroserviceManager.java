@@ -24,7 +24,7 @@ public class MicroserviceManager {
 
 	private List<Microservice> latestMicroservices = new ArrayList<>();
 	private List<Microservice> currentMicroservices = new ArrayList<>();
-	private Map<String, Route> routes;
+	private Map<String, Route> routes = new HashMap<>();
 	private Map<String, String> configs = new HashMap<>();
 	private List<Registry> registries = new ArrayList<>();
 

@@ -497,6 +497,7 @@ public class FieldAgent implements IOFogModule {
             } else {
                 JsonObject result = orchestrator.request("routes", RequestType.GET, null, null);
                 routesJson = result.getJsonArray("routes");
+                saveFile(routesJson, filesPath + filename);
             }
             Map<String, Route> routesMap = parseRoutesJson(routesJson);
             microserviceManager.setRoutes(routesMap);

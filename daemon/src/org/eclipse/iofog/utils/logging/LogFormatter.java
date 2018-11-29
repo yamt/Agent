@@ -12,12 +12,14 @@
  *******************************************************************************/
 package org.eclipse.iofog.utils.logging;
 
+import org.jboss.logmanager.Level;
+
 import java.text.DateFormat;
 import java.text.SimpleDateFormat;
 import java.util.logging.Formatter;
 import java.util.logging.LogRecord;
 
-import org.jboss.logmanager.Level;
+
 
 /**
  * formats logs 

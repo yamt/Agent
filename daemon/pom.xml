@@ -113,7 +113,7 @@
 		<dependency>
 			<groupId>io.netty</groupId>
 			<artifactId>netty-all</artifactId>
-			<version>4.0.34.Final</version>
+			<version>4.1.31.Final</version>
 		</dependency>
 		<dependency>
 			<groupId>org.glassfish</groupId>
@@ -144,6 +144,11 @@
 			<groupId>org.apache.activemq</groupId>
 			<artifactId>artemis-server</artifactId>
 			<version>2.6.3</version>
+		</dependency>
+		<dependency>
+			<groupId>org.jboss.logmanager</groupId>
+			<artifactId>jboss-logmanager</artifactId>
+			<version>2.1.5.Final</version>
 		</dependency>
 	</dependencies>
 
