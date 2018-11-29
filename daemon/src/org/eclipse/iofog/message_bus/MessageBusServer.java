@@ -90,7 +90,7 @@ public class MessageBusServer {
 		configuration.setPersistenceEnabled(false);
         configuration.setSecurityEnabled(false);
         configuration.setPagingDirectory(workingDirectory + "messages/paging");
-        configuration.getAddressesSettings().put(Constants.address, addressSettings);
+        configuration.getAddressesSettings().put(Constants.ADDRESS, addressSettings);
         
 		Map<String, Object> connectionParams = new HashMap<>();
 		connectionParams.put("port", 55555);
@@ -121,18 +121,18 @@ public class MessageBusServer {
 	 */
 	void initialize() throws Exception {
 		messageBusSession = sf.createSession(true, true, 0);
-		ClientSession.QueueQuery queueQuery = messageBusSession.queueQuery(new SimpleString(Constants.address));
+		ClientSession.QueueQuery queueQuery = messageBusSession.queueQuery(new SimpleString(Constants.ADDRESS));
 		if (queueQuery.isExists())
-			messageBusSession.deleteQueue(Constants.address);
-		queueQuery = messageBusSession.queueQuery(new SimpleString(Constants.commandlineAddress));
+			messageBusSession.deleteQueue(Constants.ADDRESS);
+		queueQuery = messageBusSession.queueQuery(new SimpleString(Constants.COMMAND_LINE_ADDRESS));
 		if (queueQuery.isExists())
-			messageBusSession.deleteQueue(Constants.commandlineAddress);
-		messageBusSession.createQueue(Constants.address, RoutingType.ANYCAST, Constants.address, false);
-		messageBusSession.createQueue(Constants.commandlineAddress, RoutingType.ANYCAST, Constants.commandlineAddress, false);
+			messageBusSession.deleteQueue(Constants.COMMAND_LINE_ADDRESS);
+		messageBusSession.createQueue(Constants.ADDRESS, RoutingType.ANYCAST, Constants.ADDRESS, false);
+		messageBusSession.createQueue(Constants.COMMAND_LINE_ADDRESS, RoutingType.ANYCAST, Constants.COMMAND_LINE_ADDRESS, false);
 
-		commandlineProducer = messageBusSession.createProducer(Constants.commandlineAddress);
+		commandlineProducer = messageBusSession.createProducer(Constants.COMMAND_LINE_ADDRESS);
 		
-		commandlineConsumer = messageBusSession.createConsumer(Constants.commandlineAddress, String.format("receiver = '%s'", "iofog.commandline.command"));
+		commandlineConsumer = messageBusSession.createConsumer(Constants.COMMAND_LINE_ADDRESS, String.format("receiver = '%s'", "iofog.commandline.command"));
 		commandlineConsumer.setMessageHandler(new CommandLineHandler());
 		messageBusSession.start();
 	}
@@ -147,7 +147,7 @@ public class MessageBusServer {
 		if (consumers == null)
 			consumers = new ConcurrentHashMap<>();
 
-		ClientConsumer consumer = messageBusSession.createConsumer(Constants.address, String.format("receiver = '%s'", name));
+		ClientConsumer consumer = messageBusSession.createConsumer(Constants.ADDRESS, String.format("receiver = '%s'", name));
 		consumers.put(name, consumer);
 	}
 	
@@ -187,7 +187,7 @@ public class MessageBusServer {
 	void createProducer(String name) throws Exception {
 		if (producers == null)
 			producers = new ConcurrentHashMap<>();
-		ClientProducer producer = messageBusSession.createProducer(Constants.address);
+		ClientProducer producer = messageBusSession.createProducer(Constants.ADDRESS);
 		producers.put(name, producer);
 	}
 	
@@ -270,6 +270,6 @@ public class MessageBusServer {
 		addressSettings.setMaxSizeBytes(memoryLimit);
 		addressSettings.setAddressFullMessagePolicy(AddressFullMessagePolicy.DROP);
 
-		server.getAddressSettingsRepository().addMatch(Constants.address, addressSettings);
+		server.getAddressSettingsRepository().addMatch(Constants.ADDRESS, addressSettings);
 	}
 }
