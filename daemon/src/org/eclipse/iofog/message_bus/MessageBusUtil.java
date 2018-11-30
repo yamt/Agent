@@ -97,5 +97,4 @@ public class MessageBusUtil {
 			return null;
 		return messagePublisher.messageQuery(from, to);
 	}
-	
 }

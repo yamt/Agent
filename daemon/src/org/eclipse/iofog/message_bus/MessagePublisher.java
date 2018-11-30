@@ -16,8 +16,6 @@ import org.apache.activemq.artemis.api.core.client.ClientMessage;
 import org.apache.activemq.artemis.api.core.client.ClientProducer;
 import org.apache.activemq.artemis.api.core.client.ClientSession;
 import org.eclipse.iofog.connector_client.ConnectorClient;
-import org.eclipse.iofog.connector_client.ConnectorMessageCallback;
-import org.eclipse.iofog.connector_client.ConnectorMessageListener;
 import org.eclipse.iofog.microservice.Microservice;
 import org.eclipse.iofog.microservice.Receiver;
 import org.eclipse.iofog.microservice.Route;
@@ -58,10 +56,19 @@ public class MessagePublisher implements AutoCloseable {
 	}
 
 	private void enableConnectorRealTimeReceiving() {
-		if (!route.getProducer().isLocal() && producer != null && !producer.isClosed()) {
-			ConnectorMessageListener listener = new ConnectorMessageListener(new ConnectorMessageCallback());
-			connectorClient = new ConnectorClient(route.getProducer().getRouteConfig());
-			connectorClient.setMessageListener(listener);
+//		if (!route.getProducer().isLocal() && producer != null && !producer.isClosed()) {
+//			ConnectorMessageListener listener = new ConnectorMessageListener(new ConnectorMessageCallback());
+//			connectorClient = new ConnectorClient(route.getProducer().getRouteConfig());
+//			connectorClient.setMessageListener(listener);
+//		}
+
+		if (route.getProducer().isLocal()) {
+
+			for (Receiver receiver : route.getReceivers()) {
+				if (!receiver.isLocal()) {
+
+				}
+			}
 		}
 	}
 

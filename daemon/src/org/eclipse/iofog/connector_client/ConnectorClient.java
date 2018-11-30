@@ -112,7 +112,7 @@ public class ConnectorClient {
 		ClientMessage clientMessage = session.createMessage(true);
 		byte[] bytesMsg = message.getBytes();
 		clientMessage.getBodyBuffer().writeBytes(bytesMsg);
-		clientMessage.putStringProperty("token", routeConfig.getPassKey());
+		clientMessage.putStringProperty("key", routeConfig.getPassKey());
 		if (producer != null) {
 			try {
 				producer.send(clientMessage);
