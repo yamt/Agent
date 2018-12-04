@@ -12,18 +12,24 @@
  *******************************************************************************/
 package org.eclipse.iofog.message_bus;
 
+import org.apache.activemq.artemis.api.core.ActiveMQException;
 import org.apache.activemq.artemis.api.core.client.ClientMessage;
 import org.apache.activemq.artemis.api.core.client.ClientProducer;
 import org.apache.activemq.artemis.api.core.client.ClientSession;
-import org.eclipse.iofog.connector_client.ConnectorClient;
+import org.eclipse.iofog.connector_client.ConnectorClientOld;
+import org.eclipse.iofog.connector_client.ConnectorMessageCallback;
+import org.eclipse.iofog.connector_client.ConnectorMessageListener;
 import org.eclipse.iofog.microservice.Microservice;
 import org.eclipse.iofog.microservice.Receiver;
 import org.eclipse.iofog.microservice.Route;
+import org.eclipse.iofog.connector_client.ConnectorConfig;
 import org.eclipse.iofog.utils.logging.LoggingService;
 
 import java.util.List;
+import java.util.concurrent.CompletableFuture;
 
 import static org.eclipse.iofog.message_bus.MessageBus.MODULE_NAME;
+import static org.eclipse.iofog.utils.logging.LoggingService.logInfo;
 import static org.eclipse.iofog.utils.logging.LoggingService.logWarning;
 
 /**
@@ -37,7 +43,8 @@ public class MessagePublisher implements AutoCloseable {
 	private Route route;
 	private ClientProducer producer;
 	private ClientSession session;
-	private ConnectorClient connectorClient;
+	private ConnectorClientOld connectorClient;
+	private CompletableFuture<Void> connectorFuture;
 
 	public MessagePublisher(Route route, ClientProducer producer) {
 		this.archive = new MessageArchive(route.getProducer().getMicroserviceId());
@@ -56,24 +63,66 @@ public class MessagePublisher implements AutoCloseable {
 	}
 
 	private void enableConnectorRealTimeReceiving() {
-//		if (!route.getProducer().isLocal() && producer != null && !producer.isClosed()) {
-//			ConnectorMessageListener listener = new ConnectorMessageListener(new ConnectorMessageCallback());
-//			connectorClient = new ConnectorClient(route.getProducer().getRouteConfig());
-//			connectorClient.setMessageListener(listener);
-//		}
+		if (!route.getProducer().isLocal() && producer != null && !producer.isClosed()) {
+			connectorFuture = CompletableFuture.runAsync(() -> createConnectorSession(route.getProducer().getRouteConfig()))
+				.thenRun(this::createConnectorConsumer)
+				.thenRun(() -> {
+					ConnectorMessageListener listener = new ConnectorMessageListener(new ConnectorMessageCallback());
+					connectorClient.setMessageListener(listener);
+				});
+		}
+	}
 
-		if (route.getProducer().isLocal()) {
+	private void createConnectorSession(ConnectorConfig routeConfig) {
+		boolean isConnectorSessionCreated = false;
+		while(!isConnectorSessionCreated) {
+			if (Thread.currentThread().isInterrupted()) {
+				break;
+			}
+			try {
+				this.connectorClient = new ConnectorClientOld(routeConfig);
+				isConnectorSessionCreated = true;
+			} catch (Exception e) {
+				logWarning(MODULE_NAME, "Unable to create connector session: " + e.getMessage());
+				logInfo(MODULE_NAME, "Going to create connector session in 10 seconds.");
+				try {
+					Thread.sleep(10000);
+				} catch (InterruptedException ex) {
+					logInfo(MODULE_NAME, ex.getMessage());
+				}
+			}
+		}
+	}
 
-			for (Receiver receiver : route.getReceivers()) {
-				if (!receiver.isLocal()) {
-
+	private void createConnectorConsumer() {
+		boolean isConsumerCreated = false;
+		while(!isConsumerCreated) {
+			if (Thread.currentThread().isInterrupted()) {
+				break;
+			}
+			try {
+				connectorClient.createConsumer();
+				isConsumerCreated = true;
+				logInfo(MODULE_NAME, "Connector consumer has been created.");
+			} catch (ActiveMQException e) {
+				logWarning(MODULE_NAME, "Failed to create connector consumer: " + e.getMessage());
+				logInfo(MODULE_NAME, "Going to create connector consumer in 10 seconds.");
+				try {
+					Thread.sleep(10000);
+				} catch (InterruptedException ex) {
+					logInfo(MODULE_NAME, ex.getMessage());
 				}
 			}
 		}
 	}
 
 	private void disableConnectorRealTimeReceiving() {
-		connectorClient.closeConsumer();
+		if (!route.getProducer().isLocal()) {
+			if (!connectorFuture.isDone()) {
+				connectorFuture.cancel(true);
+			}
+			connectorClient.closeConsumer();
+		}
 	}
 
 	/**

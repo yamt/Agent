@@ -21,6 +21,7 @@ import org.apache.activemq.artemis.core.config.impl.ConfigurationImpl;
 import org.apache.activemq.artemis.core.remoting.impl.invm.InVMAcceptorFactory;
 import org.apache.activemq.artemis.core.remoting.impl.invm.InVMConnectorFactory;
 import org.apache.activemq.artemis.core.remoting.impl.netty.NettyAcceptorFactory;
+import org.apache.activemq.artemis.core.remoting.impl.netty.TransportConstants;
 import org.apache.activemq.artemis.core.server.ActiveMQServer;
 import org.apache.activemq.artemis.core.server.JournalType;
 import org.apache.activemq.artemis.core.server.embedded.EmbeddedActiveMQ;
@@ -93,8 +94,8 @@ public class MessageBusServer {
         configuration.getAddressesSettings().put(Constants.ADDRESS, addressSettings);
 
 		Map<String, Object> connectionParams = new HashMap<>();
-		connectionParams.put("port", 55555);
-		connectionParams.put("host", "localhost");
+		connectionParams.put(TransportConstants.PORT_PROP_NAME, 55555);
+		connectionParams.put(TransportConstants.HOST_PROP_NAME, "localhost");
 		TransportConfiguration nettyConfig = new TransportConfiguration(NettyAcceptorFactory.class.getName(), connectionParams);
 
         HashSet<TransportConfiguration> transportConfig = new HashSet<>();

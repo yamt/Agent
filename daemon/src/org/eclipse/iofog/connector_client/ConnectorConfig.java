@@ -1,13 +1,13 @@
-package org.eclipse.iofog.microservice;
+package org.eclipse.iofog.connector_client;
 
-public class RouteConfig {
+public class ConnectorConfig {
 	private String host;
 	private int port;
 	private String user;
 	private String password;
 	private String passKey;
 
-	public RouteConfig(String host, int port, String user, String password, String passKey) {
+	public ConnectorConfig(String host, int port, String user, String password, String passKey) {
 		this.host = host;
 		this.port = port;
 		this.user = user;
@@ -60,7 +60,7 @@ public class RouteConfig {
 		if (this == o) return true;
 		if (o == null || getClass() != o.getClass()) return false;
 
-		RouteConfig that = (RouteConfig) o;
+		ConnectorConfig that = (ConnectorConfig) o;
 
 		if (port != that.port) return false;
 		if (!host.equals(that.host)) return false;

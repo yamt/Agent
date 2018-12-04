@@ -16,6 +16,7 @@ import org.apache.commons.lang.SystemUtils;
 import org.eclipse.iofog.IOFogModule;
 import org.eclipse.iofog.command_line.util.CommandShellExecutor;
 import org.eclipse.iofog.command_line.util.CommandShellResultSet;
+import org.eclipse.iofog.connector_client.ConnectorConfig;
 import org.eclipse.iofog.diagnostics.ImageDownloadManager;
 import org.eclipse.iofog.diagnostics.strace.MicroserviceStraceData;
 import org.eclipse.iofog.diagnostics.strace.StraceDiagnosticManger;
@@ -441,7 +442,7 @@ public class FieldAgent implements IOFogModule {
                .map(routeJson -> {
                    String producerMicroserviceUuid = routeJson.getString("microserviceUuid");
                    boolean isLocalPublisher = routeJson.getBoolean("isLocal");
-                   RouteConfig publisherRouteConfig = null;
+                   ConnectorConfig publisherRouteConfig = null;
                    if (!isLocalPublisher) {
                        publisherRouteConfig = parseRouteConfigJson(routeJson);
                    }
@@ -460,7 +461,7 @@ public class FieldAgent implements IOFogModule {
                 .map(receiverJson -> {
                     String receiver = receiverJson.getString("microserviceUuid");
                     boolean isLocalReceiver = receiverJson.getBoolean("isLocal");
-                    RouteConfig receiverRouteConfig = null;
+                    ConnectorConfig receiverRouteConfig = null;
                     if (!isLocalReceiver) {
                         receiverRouteConfig = parseRouteConfigJson(receiverJson);
                     }
@@ -469,14 +470,14 @@ public class FieldAgent implements IOFogModule {
                 .collect(toList());
     }
 
-    private RouteConfig parseRouteConfigJson(JsonObject jsonObject) {
+    private ConnectorConfig parseRouteConfigJson(JsonObject jsonObject) {
         JsonObject routeConfigJson = jsonObject.getJsonObject("routeConfig");
         String host = routeConfigJson.getString("host");
         int port = routeConfigJson.getInt("port");
         String user = routeConfigJson.getString("user");
         String password = routeConfigJson.getString("password");
         String passKey = routeConfigJson.getString("passKey");
-        return new RouteConfig(host, port, user, password, passKey);
+        return new ConnectorConfig(host, port, user, password, passKey);
     }
 
     private void loadRoutes(boolean fromFile) {

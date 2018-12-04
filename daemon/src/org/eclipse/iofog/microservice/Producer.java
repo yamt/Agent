@@ -1,11 +1,13 @@
 package org.eclipse.iofog.microservice;
 
+import org.eclipse.iofog.connector_client.ConnectorConfig;
+
 public class Producer {
 	private String microserviceId;
 	private boolean isLocal;
-	private RouteConfig routeConfig;
+	private ConnectorConfig routeConfig;
 
-	public Producer(String microserviceId, boolean isLocal, RouteConfig routeConfig) {
+	public Producer(String microserviceId, boolean isLocal, ConnectorConfig routeConfig) {
 		this.microserviceId = microserviceId;
 		this.isLocal = isLocal;
 		this.routeConfig = routeConfig;
@@ -27,11 +29,11 @@ public class Producer {
 		isLocal = local;
 	}
 
-	public RouteConfig getRouteConfig() {
+	public ConnectorConfig getRouteConfig() {
 		return routeConfig;
 	}
 
-	public void setRouteConfig(RouteConfig routeConfig) {
+	public void setRouteConfig(ConnectorConfig routeConfig) {
 		this.routeConfig = routeConfig;
 	}
 
