@@ -10,17 +10,22 @@ import static org.eclipse.iofog.utils.logging.LoggingService.logWarning;
 public class ConnectorProducer extends ConnectorEntity {
     public final static String MODULE_NAME = "Connector Producer";
     private ClientProducer producer;
-    private ConnectorClient connector;
+    private ConnectorProducerConfig config;
 
-    public ConnectorProducer(String name, ConnectorClient connector, ClientProducer producer) {
+    public ConnectorProducer(String name, ConnectorClient connector, ClientProducer producer, ConnectorProducerConfig connectorProducerConfig) {
         super(name, connector);
         this.producer = producer;
+        this.config = connectorProducerConfig;
+    }
+
+    public ConnectorProducerConfig getConfig() {
+        return config;
     }
 
     public void sendMessage(Message message) {
-        ClientMessage msg = connector.getSession().createMessage(false);
+        ClientMessage msg = connectorClient.getSession().createMessage(false);
         byte[] bytesMsg = message.getBytes();
-        msg.putStringProperty("key", connector.getRouteConfig().getPassKey());
+        msg.putStringProperty("key", config.getPassKey());
         msg.putBytesProperty("message", bytesMsg);
 
         if (producer != null) {
@@ -31,6 +36,16 @@ public class ConnectorProducer extends ConnectorEntity {
             }
         } else {
             logWarning(MODULE_NAME, "Producer has not been created");
+        }
+    }
+
+    public void closeProducer() {
+        if (!producer.isClosed()) {
+            try {
+                producer.close();
+            } catch (ActiveMQException e) {
+                logWarning(MODULE_NAME, "Unable to close connector producer: " + e.getMessage());
+            }
         }
     }
 }

@@ -1,16 +1,16 @@
 package org.eclipse.iofog.microservice;
 
-import org.eclipse.iofog.connector_client.ConnectorConfig;
+import org.eclipse.iofog.connector_client.ConnectorProducerConfig;
 
 public class Receiver {
 	private String microserviceUuid;
 	private boolean isLocal;
-	private ConnectorConfig routeConfig;
+	private ConnectorProducerConfig connectorProducerConfig;
 
-	public Receiver(String microserviceUuid, boolean isLocal, ConnectorConfig routeConfig) {
+	public Receiver(String microserviceUuid, boolean isLocal, ConnectorProducerConfig connectorProducerConfig) {
 		this.microserviceUuid = microserviceUuid;
 		this.isLocal = isLocal;
-		this.routeConfig = routeConfig;
+		this.connectorProducerConfig = connectorProducerConfig;
 	}
 
 	public String getMicroserviceUuid() {
@@ -29,12 +29,12 @@ public class Receiver {
 		isLocal = local;
 	}
 
-	public ConnectorConfig getRouteConfig() {
-		return routeConfig;
+	public ConnectorProducerConfig getConnectorProducerConfig() {
+		return connectorProducerConfig;
 	}
 
-	public void setRouteConfig(ConnectorConfig routeConfig) {
-		this.routeConfig = routeConfig;
+	public void setConnectorProducerConfig(ConnectorProducerConfig connectorProducerConfig) {
+		this.connectorProducerConfig = connectorProducerConfig;
 	}
 
 	@Override
@@ -46,14 +46,14 @@ public class Receiver {
 
 		if (isLocal != receiver.isLocal) return false;
 		if (!microserviceUuid.equals(receiver.microserviceUuid)) return false;
-		return routeConfig != null ? routeConfig.equals(receiver.routeConfig) : receiver.routeConfig == null;
+		return connectorProducerConfig != null ? connectorProducerConfig.equals(receiver.connectorProducerConfig) : receiver.connectorProducerConfig == null;
 	}
 
 	@Override
 	public int hashCode() {
 		int result = microserviceUuid.hashCode();
 		result = 31 * result + (isLocal ? 1 : 0);
-		result = 31 * result + (routeConfig != null ? routeConfig.hashCode() : 0);
+		result = 31 * result + (connectorProducerConfig != null ? connectorProducerConfig.hashCode() : 0);
 		return result;
 	}
 }

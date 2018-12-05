@@ -1,16 +1,16 @@
 package org.eclipse.iofog.microservice;
 
-import org.eclipse.iofog.connector_client.ConnectorConfig;
+import org.eclipse.iofog.connector_client.ConnectorConsumerConfig;
 
 public class Producer {
 	private String microserviceId;
 	private boolean isLocal;
-	private ConnectorConfig routeConfig;
+	private ConnectorConsumerConfig connectorConsumerConfig;
 
-	public Producer(String microserviceId, boolean isLocal, ConnectorConfig routeConfig) {
+	public Producer(String microserviceId, boolean isLocal, ConnectorConsumerConfig connectorConsumerConfig) {
 		this.microserviceId = microserviceId;
 		this.isLocal = isLocal;
-		this.routeConfig = routeConfig;
+		this.connectorConsumerConfig = connectorConsumerConfig;
 	}
 
 	public String getMicroserviceId() {
@@ -29,12 +29,12 @@ public class Producer {
 		isLocal = local;
 	}
 
-	public ConnectorConfig getRouteConfig() {
-		return routeConfig;
+	public ConnectorConsumerConfig getConnectorConsumerConfig() {
+		return connectorConsumerConfig;
 	}
 
-	public void setRouteConfig(ConnectorConfig routeConfig) {
-		this.routeConfig = routeConfig;
+	public void setConnectorConsumerConfig(ConnectorConsumerConfig connectorConsumerConfig) {
+		this.connectorConsumerConfig = connectorConsumerConfig;
 	}
 
 	@Override
@@ -46,14 +46,14 @@ public class Producer {
 
 		if (isLocal != producer.isLocal) return false;
 		if (!microserviceId.equals(producer.microserviceId)) return false;
-		return routeConfig != null ? routeConfig.equals(producer.routeConfig) : producer.routeConfig == null;
+		return connectorConsumerConfig != null ? connectorConsumerConfig.equals(producer.connectorConsumerConfig) : producer.connectorConsumerConfig == null;
 	}
 
 	@Override
 	public int hashCode() {
 		int result = microserviceId.hashCode();
 		result = 31 * result + (isLocal ? 1 : 0);
-		result = 31 * result + (routeConfig != null ? routeConfig.hashCode() : 0);
+		result = 31 * result + (connectorConsumerConfig != null ? connectorConsumerConfig.hashCode() : 0);
 		return result;
 	}
 }

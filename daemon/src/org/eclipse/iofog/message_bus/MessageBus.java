@@ -13,7 +13,11 @@
 package org.eclipse.iofog.message_bus;
 
 import org.eclipse.iofog.IOFogModule;
-import org.eclipse.iofog.microservice.*;
+import org.eclipse.iofog.connector_client.ConnectorManager;
+import org.eclipse.iofog.microservice.Microservice;
+import org.eclipse.iofog.microservice.MicroserviceManager;
+import org.eclipse.iofog.microservice.Receiver;
+import org.eclipse.iofog.microservice.Route;
 import org.eclipse.iofog.status_reporter.StatusReporter;
 import org.eclipse.iofog.utils.configuration.Configuration;
 import org.eclipse.iofog.utils.logging.LoggingService;
@@ -140,7 +144,7 @@ public class MessageBus implements IOFogModule {
                         return new MessageReceiver(
                             item.getMicroserviceUuid(),
                             item.isLocal(),
-                            item.getRouteConfig(),
+                            item.getConnectorProducerConfig(),
                             messageBusServer.getConsumer(item.getMicroserviceUuid())
                         );
                     })));
@@ -222,7 +226,7 @@ public class MessageBus implements IOFogModule {
                             receivers.put(receiver, new MessageReceiver(
                                 receiver,
                                 value.isLocal(),
-                                value.getRouteConfig(),
+                                value.getConnectorProducerConfig(),
                                 messageBusServer.getConsumer(receiver)));
                             logInfo("consumer module restarted");
                         } catch (Exception e) {
@@ -242,6 +246,7 @@ public class MessageBus implements IOFogModule {
      */
     public void update() {
         synchronized (updateLock) {
+            ConnectorManager connectorManager = ConnectorManager.INSTANCE;
             Map<String, Route> newRoutes = microserviceManager.getRoutes();
 
             Map<String, Receiver> newReceivers = newRoutes.values().stream()
@@ -257,6 +262,7 @@ public class MessageBus implements IOFogModule {
                 }
             });
             publishers.entrySet().removeIf(entry -> !newRoutes.containsKey(entry.getKey()));
+            connectorManager.getConnectorConsumers().entrySet().removeIf(entry -> !newRoutes.containsKey(entry.getKey()));
             publishers.putAll(
                 newRoutes.values().stream()
                     .filter(route -> !publishers.containsKey(route.getProducer().getMicroserviceId()))
@@ -273,6 +279,7 @@ public class MessageBus implements IOFogModule {
                 }
             });
             receivers.entrySet().removeIf(entry -> !newReceivers.containsKey(entry.getKey()));
+            connectorManager.getConnectorProducers().entrySet().removeIf(entry -> !newReceivers.containsKey(entry.getKey()));
 
             receivers.putAll(
                 newReceivers.values().stream()
@@ -281,7 +288,7 @@ public class MessageBus implements IOFogModule {
                         receiver -> new MessageReceiver(
                             receiver.getMicroserviceUuid(),
                             receiver.isLocal(),
-                            receiver.getRouteConfig(),
+                            receiver.getConnectorProducerConfig(),
                             messageBusServer.getConsumer(receiver.getMicroserviceUuid())
                         )
                     )));

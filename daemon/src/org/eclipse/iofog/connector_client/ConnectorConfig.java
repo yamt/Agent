@@ -5,14 +5,12 @@ public class ConnectorConfig {
 	private int port;
 	private String user;
 	private String password;
-	private String passKey;
 
-	public ConnectorConfig(String host, int port, String user, String password, String passKey) {
+	public ConnectorConfig(String host, int port, String user, String password) {
 		this.host = host;
 		this.port = port;
 		this.user = user;
 		this.password = password;
-		this.passKey = passKey;
 	}
 
 	public String getHost() {
@@ -47,14 +45,6 @@ public class ConnectorConfig {
 		this.password = password;
 	}
 
-	public String getPassKey() {
-		return passKey;
-	}
-
-	public void setPassKey(String passKey) {
-		this.passKey = passKey;
-	}
-
 	@Override
 	public boolean equals(Object o) {
 		if (this == o) return true;
@@ -65,8 +55,7 @@ public class ConnectorConfig {
 		if (port != that.port) return false;
 		if (!host.equals(that.host)) return false;
 		if (!user.equals(that.user)) return false;
-		if (!password.equals(that.password)) return false;
-		return passKey.equals(that.passKey);
+		return password.equals(that.password);
 	}
 
 	@Override
@@ -75,7 +64,6 @@ public class ConnectorConfig {
 		result = 31 * result + port;
 		result = 31 * result + user.hashCode();
 		result = 31 * result + password.hashCode();
-		result = 31 * result + passKey.hashCode();
 		return result;
 	}
 }

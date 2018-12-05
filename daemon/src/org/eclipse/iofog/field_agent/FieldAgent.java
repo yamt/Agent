@@ -16,7 +16,7 @@ import org.apache.commons.lang.SystemUtils;
 import org.eclipse.iofog.IOFogModule;
 import org.eclipse.iofog.command_line.util.CommandShellExecutor;
 import org.eclipse.iofog.command_line.util.CommandShellResultSet;
-import org.eclipse.iofog.connector_client.ConnectorConfig;
+import org.eclipse.iofog.connector_client.*;
 import org.eclipse.iofog.diagnostics.ImageDownloadManager;
 import org.eclipse.iofog.diagnostics.strace.MicroserviceStraceData;
 import org.eclipse.iofog.diagnostics.strace.StraceDiagnosticManger;
@@ -76,6 +76,7 @@ public class FieldAgent implements IOFogModule {
     private SshProxyManager sshProxyManager;
     private long lastGetChangesList;
     private MicroserviceManager microserviceManager;
+    private ConnectorManager connectorManager;
     private static FieldAgent instance;
     private boolean initialization;
     private boolean connected = false;
@@ -286,6 +287,7 @@ public class FieldAgent implements IOFogModule {
                     }
                     if (changes.getBoolean("routing") || initialization) {
                         loadRoutes(false);
+                        loadConnectors(false);
                         MessageBus.getInstance().update();
                     }
                     if (changes.getBoolean("tunnel") && !initialization) {
@@ -442,15 +444,46 @@ public class FieldAgent implements IOFogModule {
                .map(routeJson -> {
                    String producerMicroserviceUuid = routeJson.getString("microserviceUuid");
                    boolean isLocalPublisher = routeJson.getBoolean("isLocal");
-                   ConnectorConfig publisherRouteConfig = null;
+                   ConnectorConsumerConfig connectorConsumerConfig = null;
                    if (!isLocalPublisher) {
-                       publisherRouteConfig = parseRouteConfigJson(routeJson);
+                       connectorConsumerConfig = parseConnectorConsumerConfigJson(routeJson);
                    }
-                   Producer producer = new Producer(producerMicroserviceUuid, isLocalPublisher, publisherRouteConfig);
+                   Producer producer = new Producer(producerMicroserviceUuid, isLocalPublisher, connectorConsumerConfig);
                    List<Receiver> receivers = parseReceiversJson(routeJson);
                    return new Route(producer, receivers);
                })
                .collect(toMap(route -> route.getProducer().getMicroserviceId(), Function.identity()));
+    }
+
+    private ConnectorConsumerConfig parseConnectorConsumerConfigJson(JsonObject jsonObject) {
+        JsonObject configJson = jsonObject.getJsonObject("config");
+        Integer connectorId = configJson.getInt("connectorId");
+        String topicName = configJson.getString("topicName");
+        String passKey = configJson.getString("passKey");
+        return new ConnectorConsumerConfig(connectorId, topicName, passKey);
+    }
+
+    private ConnectorProducerConfig parseConnectorProducerConfigJson(JsonObject jsonObject) {
+        JsonObject configJson = jsonObject.getJsonObject("config");
+        Integer connectorId = configJson.getInt("connectorId");
+        String passKey = configJson.getString("passKey");
+        return new ConnectorProducerConfig(connectorId, passKey);
+    }
+
+    private Map<Integer, ConnectorClient> parseConnectorsJson(JsonArray connectorsJson) {
+        return IntStream.range(0, connectorsJson.size())
+            .boxed()
+            .map(connectorsJson::getJsonObject)
+            .map(connectorJson -> {
+                Integer connectorId = connectorJson.getInt("id");
+                String host = connectorJson.getString("host");
+                int port = connectorJson.getInt("port");
+                String user = connectorJson.getString("user");
+                String password = connectorJson.getString("password");
+                ConnectorConfig connectorConfig = new ConnectorConfig(host, port, user, password);
+                return new ConnectorClient(connectorId, connectorConfig);
+            })
+            .collect(toMap(ConnectorClient::getId, Function.identity()));
     }
 
     private List<Receiver> parseReceiversJson(JsonObject jsonObject) {
@@ -461,23 +494,13 @@ public class FieldAgent implements IOFogModule {
                 .map(receiverJson -> {
                     String receiver = receiverJson.getString("microserviceUuid");
                     boolean isLocalReceiver = receiverJson.getBoolean("isLocal");
-                    ConnectorConfig receiverRouteConfig = null;
+                    ConnectorProducerConfig connectorProducerConfig = null;
                     if (!isLocalReceiver) {
-                        receiverRouteConfig = parseRouteConfigJson(receiverJson);
+                        connectorProducerConfig = parseConnectorProducerConfigJson(receiverJson);
                     }
-                    return new Receiver(receiver, isLocalReceiver, receiverRouteConfig);
+                    return new Receiver(receiver, isLocalReceiver, connectorProducerConfig);
                 })
                 .collect(toList());
-    }
-
-    private ConnectorConfig parseRouteConfigJson(JsonObject jsonObject) {
-        JsonObject routeConfigJson = jsonObject.getJsonObject("routeConfig");
-        String host = routeConfigJson.getString("host");
-        int port = routeConfigJson.getInt("port");
-        String user = routeConfigJson.getString("user");
-        String password = routeConfigJson.getString("password");
-        String passKey = routeConfigJson.getString("passKey");
-        return new ConnectorConfig(host, port, user, password, passKey);
     }
 
     private void loadRoutes(boolean fromFile) {
@@ -502,6 +525,35 @@ public class FieldAgent implements IOFogModule {
             }
             Map<String, Route> routesMap = parseRoutesJson(routesJson);
             microserviceManager.setRoutes(routesMap);
+        } catch (CertificateException | SSLHandshakeException e) {
+            verificationFailed();
+        } catch (Exception e) {
+            logWarning("Unable to get routes: " + e.getMessage());
+        }
+    }
+
+    private void loadConnectors(boolean fromFile) {
+        logInfo("loading connectors...");
+        if (notProvisioned() || !isControllerConnected(fromFile)) {
+            return;
+        }
+
+        String filename = "connectors.json";
+        JsonArray connectorsJson;
+        try {
+            if (fromFile) {
+                connectorsJson = readFile(filesPath + filename);
+                if (connectorsJson == null) {
+                    JsonObject result = orchestrator.request("connectors", RequestType.GET, null, null);
+                    connectorsJson = result.getJsonArray("connectors");
+                }
+            } else {
+                JsonObject result = orchestrator.request("connectors", RequestType.GET, null, null);
+                connectorsJson = result.getJsonArray("connectors");
+                saveFile(connectorsJson, filesPath + filename);
+            }
+            Map<Integer, ConnectorClient> connectorsMap = parseConnectorsJson(connectorsJson);
+            connectorManager.setConnectorClients(connectorsMap);
         } catch (CertificateException | SSLHandshakeException e) {
             verificationFailed();
         } catch (Exception e) {
@@ -910,6 +962,7 @@ public class FieldAgent implements IOFogModule {
             List<Microservice> microservices = loadMicroservices(false);
             processMicroserviceConfig(microservices);
             loadRoutes(false);
+            loadConnectors(false);
             notifyModules();
 
             sendHWInfoFromHalToController();
@@ -990,6 +1043,7 @@ public class FieldAgent implements IOFogModule {
             StatusReporter.setFieldAgentStatus().setControllerStatus(NOT_PROVISIONED);
 
         microserviceManager = MicroserviceManager.getInstance();
+        connectorManager = ConnectorManager.INSTANCE;
         orchestrator = new Orchestrator();
         sshProxyManager = new SshProxyManager(new SshConnection());
 
@@ -1000,6 +1054,7 @@ public class FieldAgent implements IOFogModule {
             List<Microservice> microservices = loadMicroservices(!isConnected);
             processMicroserviceConfig(microservices);
             loadRoutes(!isConnected);
+            loadConnectors(!isConnected);
         }
 
         new Thread(pingController, "FieldAgent : Ping").start();

@@ -12,22 +12,18 @@
  *******************************************************************************/
 package org.eclipse.iofog.message_bus;
 
-import org.apache.activemq.artemis.api.core.ActiveMQException;
 import org.apache.activemq.artemis.api.core.client.ClientConsumer;
 import org.apache.activemq.artemis.api.core.client.ClientMessage;
-import org.eclipse.iofog.connector_client.ConnectorClient;
-import org.eclipse.iofog.connector_client.ConnectorClientOld;
 import org.eclipse.iofog.connector_client.ConnectorManager;
+import org.eclipse.iofog.connector_client.ConnectorProducer;
+import org.eclipse.iofog.connector_client.ConnectorProducerConfig;
 import org.eclipse.iofog.local_api.MessageCallback;
 import org.eclipse.iofog.local_api.RemoteMessageCallback;
 import org.eclipse.iofog.microservice.Microservice;
-import org.eclipse.iofog.connector_client.ConnectorConfig;
 
 import java.util.ArrayList;
 import java.util.List;
-import java.util.concurrent.CompletableFuture;
 
-import static org.eclipse.iofog.utils.logging.LoggingService.logInfo;
 import static org.eclipse.iofog.utils.logging.LoggingService.logWarning;
 
 /**
@@ -41,22 +37,25 @@ public class MessageReceiver implements AutoCloseable {
 
 	private final String name;
 	private boolean isLocal;
-	private Integer connectorId;
+	private ConnectorProducerConfig connectorProducerConfig;
 	private MessageListener listener;
 	private final ClientConsumer consumer;
-	private ConnectorClient connectorClient;
-	private CompletableFuture<Void> connectorFuture;
+	private ConnectorProducer connectorProducer;
 
-	public MessageReceiver(String name, boolean isLocal, Integer connectorId, ClientConsumer consumer) {
+	public MessageReceiver(String name, boolean isLocal, ConnectorProducerConfig connectorProducerConfig, ClientConsumer consumer) {
 		this.name = name;
 		this.isLocal = isLocal;
-		this.connectorId = connectorId;
+		this.connectorProducerConfig = connectorProducerConfig;
 		this.consumer = consumer;
-		enableConnectorRealTimeProducing(connectorId);
+		enableConnectorRealTimeProducing();
 	}
 
 	public boolean isLocal() {
 		return isLocal;
+	}
+
+	public ConnectorProducerConfig getConnectorProducerConfig() {
+		return connectorProducerConfig;
 	}
 
 	/**
@@ -101,72 +100,26 @@ public class MessageReceiver implements AutoCloseable {
 		return name;
 	}
 
-	private void enableConnectorRealTimeProducing(Integer connectorId) {
+	private void enableConnectorRealTimeProducing() {
 		if (!isLocal) {
 			if (consumer == null || consumer.isClosed())
 				return;
 
-			connectorFuture = ConnectorManager.INSTANCE.createConnectorProducer(name, connectorId)
-				.thenApplyAsync((connectorProducer) -> {
-					listener = new MessageListener(new RemoteMessageCallback(name, ConnectorManager.INSTANCE));
-					try {
-						consumer.setMessageHandler(listener);
-					} catch (Exception e) {
-						listener = null;
-					}
-				});
+			connectorProducer = ConnectorManager.INSTANCE.getConnectorProducer(name, connectorProducerConfig);
+			if (connectorProducer != null) {
+				listener = new MessageListener(new RemoteMessageCallback(name, connectorProducer));
+				try {
+					consumer.setMessageHandler(listener);
+				} catch (Exception e) {
+					listener = null;
+				}
+			}
 		}
 	}
 
 	private void disableConnectorRealTimeProducing() {
-		if (!isLocal) {
-			if (!connectorFuture.isDone()) {
-				connectorFuture.cancel(true);
-			}
-			connectorClient.closeProducer();
-		}
-	}
-
-	private void createConnectorSession(ConnectorConfig routeConfig) {
-		boolean isConnectorSessionCreated = false;
-		while(!isConnectorSessionCreated) {
-			if (Thread.currentThread().isInterrupted()) {
-				break;
-			}
-			try {
-				this.connectorClient = new ConnectorClientOld(routeConfig);
-				isConnectorSessionCreated = true;
-			} catch (Exception e) {
-				logWarning(MODULE_NAME, "Unable to create connector session: " + e.getMessage());
-				logInfo(MODULE_NAME, "Going to create connector session in 10 seconds.");
-				try {
-					Thread.sleep(10000);
-				} catch (InterruptedException ex) {
-					logInfo(MODULE_NAME, ex.getMessage());
-				}
-			}
-		}
-	}
-
-	private void createConnectorProducer() {
-		boolean isProducerCreated = false;
-		while(!isProducerCreated) {
-			if (Thread.currentThread().isInterrupted()) {
-				break;
-			}
-			try {
-				connectorClient.createProducer();
-				isProducerCreated = true;
-				logInfo(MODULE_NAME, "Connector producer has been created.");
-			} catch (ActiveMQException e) {
-				logWarning(MODULE_NAME, "Failed to create connector producer: " + e.getMessage());
-				logInfo(MODULE_NAME, "Going to create connector producer in 10 seconds.");
-				try {
-					Thread.sleep(10000);
-				} catch (InterruptedException ex) {
-					logInfo(MODULE_NAME, ex.getMessage());
-				}
-			}
+		if (!isLocal && connectorProducer != null) {
+			connectorProducer.closeProducer();
 		}
 	}
 	

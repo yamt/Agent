@@ -3,19 +3,26 @@ package org.eclipse.iofog.connector_client;
 import org.apache.activemq.artemis.api.core.ActiveMQException;
 import org.apache.activemq.artemis.api.core.TransportConfiguration;
 import org.apache.activemq.artemis.api.core.client.*;
-import org.apache.activemq.artemis.core.remoting.impl.netty.NettyAcceptorFactory;
+import org.apache.activemq.artemis.core.remoting.impl.netty.NettyConnectorFactory;
 import org.apache.activemq.artemis.core.remoting.impl.netty.TransportConstants;
 
 import java.util.HashMap;
 import java.util.Map;
 
+import static org.eclipse.iofog.utils.logging.LoggingService.logWarning;
+
 public class ConnectorClient {
     public final static String MODULE_NAME = "Connector Client";
     private Integer id;
-    private ConnectorConfig routeConfig;
+    private ConnectorConfig connectorConfig;
     private ClientSession session;
 
-    public ClientSession getSession() {
+    public ConnectorClient(Integer id, ConnectorConfig connectorConfig) {
+        this.id = id;
+        this.connectorConfig = connectorConfig;
+    }
+
+    synchronized ClientSession getSession() {
         return session;
     }
 
@@ -23,34 +30,48 @@ public class ConnectorClient {
         return id;
     }
 
-    public ConnectorConfig getRouteConfig() {
-        return routeConfig;
+    ConnectorConfig getConnectorConfig() {
+        return connectorConfig;
     }
 
-    public void createSession() throws Exception {
+    void createSession() throws Exception {
         Map<String, Object> connectionParams = new HashMap<>();
-        connectionParams.put(TransportConstants.PORT_PROP_NAME, routeConfig.getPort());
-        connectionParams.put(TransportConstants.HOST_PROP_NAME, routeConfig.getHost());
+        connectionParams.put(TransportConstants.PORT_PROP_NAME, connectorConfig.getPort());
+        connectionParams.put(TransportConstants.HOST_PROP_NAME, connectorConfig.getHost());
 
         TransportConfiguration transportConfiguration =
             new TransportConfiguration(
-                NettyAcceptorFactory.class.getName(),
+                NettyConnectorFactory.class.getName(),
                 connectionParams);
 
         ServerLocator locator = ActiveMQClient.createServerLocatorWithoutHA(transportConfiguration);
         ClientSessionFactory factory = locator.createSessionFactory();
-        session = factory.createSession(routeConfig.getUser(), routeConfig.getPassword(), false, true, true, false, 0);
+        session = factory.createSession(connectorConfig.getUser(), connectorConfig.getPassword(), false, true, true, false, 0);
     }
 
-    public ClientProducer createProducer() throws ActiveMQException {
+    ClientProducer createProducer() throws ActiveMQException {
         return session.createProducer();
     }
 
-    public ClientConsumer createConsumer(String topicName, String filter) throws ActiveMQException {
+    ClientConsumer createConsumer(String topicName, String filter) throws ActiveMQException {
         return session.createConsumer(topicName, filter);
     }
 
-    public void startSession() throws ActiveMQException {
-        session.start();
+    void startSession() {
+        try {
+            session.start();
+        } catch (ActiveMQException e) {
+            logWarning(MODULE_NAME, "Unable to start connector session: " + e.getMessage());
+        }
+    }
+
+    void closeSession() {
+        if (!session.isClosed()) {
+            try {
+                session.close();
+            } catch (ActiveMQException e) {
+                logWarning(MODULE_NAME, "Unable to close connector session: " + e.getMessage());
+            }
+        }
     }
 }
