@@ -14,12 +14,15 @@ package org.eclipse.iofog.local_api;
 
 import org.eclipse.iofog.message_bus.Message;
 
+import static org.eclipse.iofog.utils.logging.LoggingService.logInfo;
+
 /**
  * Interface for the message bus to send real-time messages 
  * @author ashita
  * @since 2016
  */
 public class MessageCallback {
+	private static final String MODULE_NAME = "Message Callback";
 	private final String name;
 	
 	public MessageCallback(String name) {
@@ -34,5 +37,6 @@ public class MessageCallback {
 	public void sendRealtimeMessage(Message message) {
 		MessageWebsocketHandler handler = new MessageWebsocketHandler();
 		handler.sendRealTimeMessage(name, message);
+		logInfo(MODULE_NAME, "Sent real time message to container");
 	}
 }

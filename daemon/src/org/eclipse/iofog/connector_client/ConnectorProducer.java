@@ -12,8 +12,8 @@ public class ConnectorProducer extends ConnectorEntity {
     private ClientProducer producer;
     private ConnectorProducerConfig config;
 
-    public ConnectorProducer(String name, ConnectorClient connector, ClientProducer producer, ConnectorProducerConfig connectorProducerConfig) {
-        super(name, connector);
+    public ConnectorProducer(String name, ConnectorClient connectorClient, ClientProducer producer, ConnectorProducerConfig connectorProducerConfig) {
+        super(name, connectorClient);
         this.producer = producer;
         this.config = connectorProducerConfig;
     }

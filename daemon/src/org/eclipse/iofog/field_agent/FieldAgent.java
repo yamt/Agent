@@ -466,8 +466,9 @@ public class FieldAgent implements IOFogModule {
     private ConnectorProducerConfig parseConnectorProducerConfigJson(JsonObject jsonObject) {
         JsonObject configJson = jsonObject.getJsonObject("config");
         Integer connectorId = configJson.getInt("connectorId");
+        String topicName = configJson.getString("topicName");
         String passKey = configJson.getString("passKey");
-        return new ConnectorProducerConfig(connectorId, passKey);
+        return new ConnectorProducerConfig(connectorId, topicName, passKey);
     }
 
     private Map<Integer, ConnectorClient> parseConnectorsJson(JsonArray connectorsJson) {

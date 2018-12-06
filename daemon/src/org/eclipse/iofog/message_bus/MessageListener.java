@@ -25,7 +25,7 @@ import static org.eclipse.iofog.utils.logging.LoggingService.logWarning;
  *
  */
 public class MessageListener implements MessageHandler {
-	private static final String MODULE_NAME = "MessageListener";
+	private static final String MODULE_NAME = "Message Listener";
 
 	private final MessageCallback callback;
 	

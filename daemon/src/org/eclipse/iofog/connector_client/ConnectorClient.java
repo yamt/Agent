@@ -49,12 +49,12 @@ public class ConnectorClient {
         session = factory.createSession(connectorConfig.getUser(), connectorConfig.getPassword(), false, true, true, false, 0);
     }
 
-    ClientProducer createProducer() throws ActiveMQException {
-        return session.createProducer();
+    ClientProducer createProducer(String topicName) throws ActiveMQException {
+        return session.createProducer(String.format("pubsub.iofog.%s", topicName));
     }
 
-    ClientConsumer createConsumer(String topicName, String filter) throws ActiveMQException {
-        return session.createConsumer(topicName, filter);
+    ClientConsumer createConsumer(String topicName, String passKey) throws ActiveMQException {
+        return session.createConsumer(String.format("pubsub.iofog.%s", topicName), String.format("key='%s'", passKey));
     }
 
     void startSession() {

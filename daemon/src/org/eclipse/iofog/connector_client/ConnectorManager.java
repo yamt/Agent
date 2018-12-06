@@ -66,7 +66,7 @@ public enum ConnectorManager {
             createConnectorSession(connectorClient);
             ClientProducer clientProducer = null;
             try {
-                clientProducer = connectorClient.createProducer();
+                clientProducer = connectorClient.createProducer(connectorProducerConfig.getTopicName());
                 connectorClient.startSession();
             } catch (ActiveMQException e) {
                 logWarning(MODULE_NAME, "Unable to create connector producer: " + e.getMessage());
@@ -91,7 +91,7 @@ public enum ConnectorManager {
             try {
                 clientConsumer = connectorClient.createConsumer(
                     connectorConsumerConfig.getTopicName(),
-                    String.format("key='%s'", connectorConsumerConfig.getPassKey())
+                    connectorConsumerConfig.getPassKey()
                 );
                 connectorClient.startSession();
             } catch (ActiveMQException e) {
