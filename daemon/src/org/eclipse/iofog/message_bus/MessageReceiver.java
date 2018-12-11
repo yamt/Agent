@@ -12,14 +12,15 @@
  *******************************************************************************/
 package org.eclipse.iofog.message_bus;
 
+import org.apache.activemq.artemis.api.core.ActiveMQException;
 import org.apache.activemq.artemis.api.core.client.ClientConsumer;
 import org.apache.activemq.artemis.api.core.client.ClientMessage;
 import org.eclipse.iofog.connector_client.ConnectorManager;
 import org.eclipse.iofog.connector_client.ConnectorProducer;
-import org.eclipse.iofog.connector_client.ConnectorProducerConfig;
 import org.eclipse.iofog.local_api.MessageCallback;
 import org.eclipse.iofog.local_api.RemoteMessageCallback;
 import org.eclipse.iofog.microservice.Microservice;
+import org.eclipse.iofog.microservice.Receiver;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -35,27 +36,44 @@ import static org.eclipse.iofog.utils.logging.LoggingService.logWarning;
 public class MessageReceiver implements AutoCloseable {
 	private static final String MODULE_NAME = "Message Receiver";
 
-	private final String name;
-	private boolean isLocal;
-	private ConnectorProducerConfig connectorProducerConfig;
+	private Receiver receiver;
 	private MessageListener listener;
 	private final ClientConsumer consumer;
 	private ConnectorProducer connectorProducer;
 
-	public MessageReceiver(String name, boolean isLocal, ConnectorProducerConfig connectorProducerConfig, ClientConsumer consumer) {
-		this.name = name;
-		this.isLocal = isLocal;
-		this.connectorProducerConfig = connectorProducerConfig;
+	MessageReceiver(Receiver receiver, ClientConsumer consumer) {
+		this.receiver = receiver;
 		this.consumer = consumer;
 		enableConnectorRealTimeProducing();
 	}
 
-	public boolean isLocal() {
-		return isLocal;
+	public synchronized Receiver getReceiver() {
+		return receiver;
 	}
 
-	public ConnectorProducerConfig getConnectorProducerConfig() {
-		return connectorProducerConfig;
+	synchronized ConnectorProducer getConnectorProducer() {
+		return connectorProducer;
+	}
+
+	synchronized void updateReceiver(Receiver receiver) {
+		if (!this.receiver.equals(receiver)) {
+			if (this.receiver.isLocal() != receiver.isLocal()) {
+				if (!receiver.isLocal()) {
+					this.receiver = receiver;
+					enableConnectorRealTimeProducing();
+				} else {
+					disableConnectorRealTimeProducing();
+					this.receiver = receiver;
+				}
+			} else if (!this.receiver.isLocal()
+				&& !this.receiver.getConnectorProducerConfig().equals(receiver.getConnectorProducerConfig())) {
+				disableConnectorRealTimeProducing();
+				this.receiver = receiver;
+				enableConnectorRealTimeProducing();
+			} else {
+				this.receiver = receiver;
+			}
+		}
 	}
 
 	/**
@@ -96,29 +114,28 @@ public class MessageReceiver implements AutoCloseable {
 		return result;
 	}
 
-	protected String getName() {
-		return name;
-	}
-
-	private void enableConnectorRealTimeProducing() {
-		if (!isLocal) {
-			if (consumer == null || consumer.isClosed())
-				return;
-
-			connectorProducer = ConnectorManager.INSTANCE.getConnectorProducer(name, connectorProducerConfig);
-			if (connectorProducer != null) {
-				listener = new MessageListener(new RemoteMessageCallback(name, connectorProducer));
+	synchronized void enableConnectorRealTimeProducing() {
+		if (!receiver.isLocal() && consumer != null && !consumer.isClosed()) {
+			connectorProducer = ConnectorManager.INSTANCE.getConnectorProducer(
+				receiver.getMicroserviceUuid(),
+				receiver.getConnectorProducerConfig()
+			);
+			if (connectorProducer != null && !connectorProducer.isClosed()) {
+				listener = new MessageListener(new RemoteMessageCallback(
+					receiver.getMicroserviceUuid(),
+					connectorProducer)
+				);
 				try {
 					consumer.setMessageHandler(listener);
-				} catch (Exception e) {
-					listener = null;
+				} catch (ActiveMQException e) {
+					logWarning(MODULE_NAME, "Unable to set message bus handler: " + e.getMessage());
 				}
 			}
 		}
 	}
 
 	private void disableConnectorRealTimeProducing() {
-		if (!isLocal && connectorProducer != null) {
+		if (!receiver.isLocal() && connectorProducer != null) {
 			connectorProducer.closeProducer();
 		}
 	}
@@ -130,11 +147,11 @@ public class MessageReceiver implements AutoCloseable {
 	void enableRealTimeReceiving() {
 		if (consumer == null || consumer.isClosed())
 			return;
-		listener = new MessageListener(new MessageCallback(name));
+		listener = new MessageListener(new MessageCallback(receiver.getMicroserviceUuid()));
 		try {
 			consumer.setMessageHandler(listener);
-		} catch (Exception e) {
-			listener = null;
+		} catch (ActiveMQException e) {
+			logWarning(MODULE_NAME, "Unable to set message bus handler: " + e.getMessage());
 		}
 	}
 	
@@ -153,7 +170,7 @@ public class MessageReceiver implements AutoCloseable {
 		}
 	}
 	
-	public void close() {
+	public synchronized void close() {
 		if (consumer == null)
 			return;
 		disableRealTimeReceiving();

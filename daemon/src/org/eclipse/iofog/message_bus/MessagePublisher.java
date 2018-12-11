@@ -42,7 +42,7 @@ public class MessagePublisher implements AutoCloseable {
 	private ClientSession session;
 	private ConnectorConsumer connectorConsumer;
 
-	public MessagePublisher(Route route, ClientProducer producer) {
+	MessagePublisher(Route route, ClientProducer producer) {
 		this.archive = new MessageArchive(route.getProducer().getMicroserviceId());
 		this.route = route;
 		this.producer = producer;
@@ -50,22 +50,22 @@ public class MessagePublisher implements AutoCloseable {
 		enableConnectorRealTimeReceiving();
 	}
 
-	public Route getRoute() {
+	ConnectorConsumer getConnectorConsumer() {
+		return connectorConsumer;
+	}
+
+	synchronized Route getRoute() {
 		return route;
 	}
 
-	public void setRoute(Route route) {
-		this.route = route;
-	}
-
-	private void enableConnectorRealTimeReceiving() {
+	synchronized void enableConnectorRealTimeReceiving() {
 		if (!route.getProducer().isLocal() && producer != null && !producer.isClosed()) {
 			String name = route.getProducer().getMicroserviceId();
 			connectorConsumer = ConnectorManager.INSTANCE.getConnectorConsumer(
 				name,
 				route.getProducer().getConnectorConsumerConfig()
 			);
-			if (connectorConsumer != null) {
+			if (connectorConsumer != null && !connectorConsumer.isClosed()) {
 				ConnectorMessageListener listener = new ConnectorMessageListener(new ConnectorMessageCallback());
 				connectorConsumer.setMessageListener(listener);
 			}
@@ -107,21 +107,21 @@ public class MessagePublisher implements AutoCloseable {
 	synchronized void updateRoute(Route route) {
 		if (!this.route.equals(route)) {
 			if (this.route.getProducer().isLocal() != route.getProducer().isLocal()) {
-				if (this.route.getProducer().isLocal()) {
+				if (!route.getProducer().isLocal()) {
 					this.route = route;
 					enableConnectorRealTimeReceiving();
 				} else {
 					disableConnectorRealTimeReceiving();
 					this.route = route;
 				}
+			} else if (!this.route.getProducer().isLocal()
+				&& !this.route.getProducer().getConnectorConsumerConfig().equals(route.getProducer().getConnectorConsumerConfig())) {
+				disableConnectorRealTimeReceiving();
+				this.route = route;
+				enableConnectorRealTimeReceiving();
+ 			} else {
+				this.route = route;
 			}
-		} else if (!this.route.getProducer().isLocal()
-			&& !this.route.getProducer().getConnectorConsumerConfig().equals(route.getProducer().getConnectorConsumerConfig())) {
-			disableConnectorRealTimeReceiving();
-			this.route = route;
-			enableConnectorRealTimeReceiving();
-		} else {
-			this.route = route;
 		}
 	}
 

@@ -13,20 +13,20 @@ import static org.eclipse.iofog.utils.logging.LoggingService.logWarning;
 
 public class ConnectorClient {
     public final static String MODULE_NAME = "Connector Client";
-    private Integer id;
+    private int id;
     private ConnectorConfig connectorConfig;
     private ClientSession session;
 
-    public ConnectorClient(Integer id, ConnectorConfig connectorConfig) {
+    public ConnectorClient(int id, ConnectorConfig connectorConfig) {
         this.id = id;
         this.connectorConfig = connectorConfig;
     }
 
-    synchronized ClientSession getSession() {
+    ClientSession getSession() {
         return session;
     }
 
-    public Integer getId() {
+    public int getId() {
         return id;
     }
 
@@ -73,5 +73,9 @@ public class ConnectorClient {
                 logWarning(MODULE_NAME, "Unable to close connector session: " + e.getMessage());
             }
         }
+    }
+
+    boolean isClosed() {
+        return session == null || session.isClosed();
     }
 }

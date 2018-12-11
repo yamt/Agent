@@ -10,15 +10,15 @@ import static org.eclipse.iofog.utils.logging.LoggingService.logWarning;
 public class ConnectorProducer extends ConnectorEntity {
     public final static String MODULE_NAME = "Connector Producer";
     private ClientProducer producer;
-    private ConnectorProducerConfig config;
+    private ConnectorClientConfig config;
 
-    public ConnectorProducer(String name, ConnectorClient connectorClient, ClientProducer producer, ConnectorProducerConfig connectorProducerConfig) {
+    ConnectorProducer(String name, ConnectorClient connectorClient, ClientProducer producer, ConnectorClientConfig connectorProducerConfig) {
         super(name, connectorClient);
         this.producer = producer;
         this.config = connectorProducerConfig;
     }
 
-    public ConnectorProducerConfig getConfig() {
+    public ConnectorClientConfig getConfig() {
         return config;
     }
 
@@ -40,12 +40,16 @@ public class ConnectorProducer extends ConnectorEntity {
     }
 
     public void closeProducer() {
-        if (!producer.isClosed()) {
+        if (producer != null && !producer.isClosed()) {
             try {
                 producer.close();
             } catch (ActiveMQException e) {
                 logWarning(MODULE_NAME, "Unable to close connector producer: " + e.getMessage());
             }
         }
+    }
+
+    public synchronized boolean isClosed() {
+        return producer == null || producer.isClosed();
     }
 }

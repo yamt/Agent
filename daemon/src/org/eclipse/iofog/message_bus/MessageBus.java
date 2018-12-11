@@ -142,9 +142,7 @@ public class MessageBus implements IOFogModule {
                                 "unable to start receiver module --> " + e.getMessage());
                         }
                         return new MessageReceiver(
-                            item.getMicroserviceUuid(),
-                            item.isLocal(),
-                            item.getConnectorProducerConfig(),
+                            item,
                             messageBusServer.getConsumer(item.getMicroserviceUuid())
                         );
                     })));
@@ -181,7 +179,7 @@ public class MessageBus implements IOFogModule {
     private final Runnable checkMessageServerStatus = () -> {
         while (true) {
             try {
-                Thread.sleep(5000);
+                Thread.sleep(10000);
 
                 logInfo("check message bus server status");
                 if (!messageBusServer.isServerActive()) {
@@ -196,42 +194,45 @@ public class MessageBus implements IOFogModule {
                     }
                 }
 
-                publishers.forEach((publisher, value) -> {
-                    if (messageBusServer.isProducerClosed(publisher)) {
-                        logWarning("producer module for " + publisher + " stopped. restarting...");
-                        value.close();
-                        Route route = routes.get(publisher);
+                publishers.forEach((publisherName, messagePublisher) -> {
+                    if (messageBusServer.isProducerClosed(publisherName)) {
+                        logWarning("producer module for " + publisherName + " stopped. restarting...");
+                        messagePublisher.close();
+                        Route route = routes.get(publisherName);
                         if (route == null || route.getReceivers() == null || route.getReceivers().size() == 0) {
-                            publishers.remove(publisher);
+                            publishers.remove(publisherName);
                         } else {
                             try {
-                                messageBusServer.createProducer(publisher);
-                                publishers.put(publisher, new MessagePublisher(
+                                messageBusServer.createProducer(publisherName);
+                                publishers.put(publisherName, new MessagePublisher(
                                     route,
-                                    messageBusServer.getProducer(publisher)));
+                                    messageBusServer.getProducer(publisherName)));
                                 logInfo("producer module restarted");
                             } catch (Exception e) {
-                                logWarning("unable to restart producer module for " + publisher + " --> " + e.getMessage());
+                                logWarning("unable to restart producer module for " + publisherName + " --> " + e.getMessage());
                             }
                         }
+                    } else if (!messagePublisher.getRoute().getProducer().isLocal()
+                        && messagePublisher.getConnectorConsumer().isClosed()) {
+                        messagePublisher.enableConnectorRealTimeReceiving();
                     }
                 });
 
-                receivers.forEach((receiver, value) -> {
-                    if (messageBusServer.isConsumerClosed(receiver)) {
-                        logWarning("consumer module for " + receiver + " stopped. restarting...");
-                        value.close();
+                receivers.forEach((receiverName, messageReceiver) -> {
+                    if (messageBusServer.isConsumerClosed(receiverName)) {
+                        logWarning("consumer module for " + receiverName + " stopped. restarting...");
+                        messageReceiver.close();
                         try {
-                            messageBusServer.createConsumer(receiver);
-                            receivers.put(receiver, new MessageReceiver(
-                                receiver,
-                                value.isLocal(),
-                                value.getConnectorProducerConfig(),
-                                messageBusServer.getConsumer(receiver)));
+                            messageBusServer.createConsumer(receiverName);
+                            receivers.put(receiverName, new MessageReceiver(
+                                messageReceiver.getReceiver(),
+                                messageBusServer.getConsumer(receiverName)));
                             logInfo("consumer module restarted");
                         } catch (Exception e) {
-                            logWarning("unable to restart consumer module for " + receiver + " --> " + e.getMessage());
+                            logWarning("unable to restart consumer module for " + receiverName + " --> " + e.getMessage());
                         }
+                    } else if (!messageReceiver.getReceiver().isLocal() && messageReceiver.getConnectorProducer().isClosed()) {
+                        messageReceiver.enableConnectorRealTimeProducing();
                     }
                 });
             } catch (Exception exp) {
@@ -253,12 +254,12 @@ public class MessageBus implements IOFogModule {
                 .flatMap(route -> route.getReceivers().stream())
                 .collect(toMap(Receiver::getMicroserviceUuid, Function.identity()));
 
-            publishers.forEach((key, value) -> {
-                if (!newRoutes.containsKey(key)) {
-                    value.close();
-                    messageBusServer.removeProducer(key);
+            publishers.forEach((publisherName, messagePublisher) -> {
+                if (!newRoutes.containsKey(publisherName)) {
+                    messagePublisher.close();
+                    messageBusServer.removeProducer(publisherName);
                 } else {
-                    value.updateRoute(newRoutes.get(key));
+                    messagePublisher.updateRoute(newRoutes.get(publisherName));
                 }
             });
             publishers.entrySet().removeIf(entry -> !newRoutes.containsKey(entry.getKey()));
@@ -272,10 +273,12 @@ public class MessageBus implements IOFogModule {
                             messageBusServer.getProducer(route.getProducer().getMicroserviceId())
                         ))));
 
-            receivers.forEach((key, value) -> {
-                if (!newReceivers.containsKey(key)) {
-                    value.close();
-                    messageBusServer.removeConsumer(key);
+            receivers.forEach((receiverName, messageReceiver) -> {
+                if (!newReceivers.containsKey(receiverName)) {
+                    messageReceiver.close();
+                    messageBusServer.removeConsumer(receiverName);
+                } else {
+                    messageReceiver.updateReceiver(newReceivers.get(receiverName));
                 }
             });
             receivers.entrySet().removeIf(entry -> !newReceivers.containsKey(entry.getKey()));
@@ -286,9 +289,7 @@ public class MessageBus implements IOFogModule {
                     .filter(receiver -> !receivers.containsKey(receiver.getMicroserviceUuid()))
                     .collect(toMap(Receiver::getMicroserviceUuid,
                         receiver -> new MessageReceiver(
-                            receiver.getMicroserviceUuid(),
-                            receiver.isLocal(),
-                            receiver.getConnectorProducerConfig(),
+                            receiver,
                             messageBusServer.getConsumer(receiver.getMicroserviceUuid())
                         )
                     )));

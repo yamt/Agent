@@ -45,49 +45,72 @@ public enum ConnectorManager {
         this.connectorClients.entrySet().removeIf(entry -> !connectorClients.containsKey(entry.getKey()));
     }
 
+    public synchronized ConnectorProducer getConnectorProducer(String name, ConnectorClientConfig connectorProducerConfig) {
+        ConnectorProducer connectorProducer = null;
+        if (connectorProducers.containsKey(name) && !connectorProducers.get(name).isClosed()) {
+            connectorProducer = connectorProducers.get(name);
+        } else if (connectorClients.containsKey(connectorProducerConfig.getConnectorId())) {
+            connectorProducer = createConnectorProducer(name, connectorProducerConfig);
+            connectorProducers.put(name, connectorProducer);
+        } else {
+            logWarning(MODULE_NAME, String.format("Connector with id %d doesn't exist", connectorProducerConfig.getConnectorId()));
+        }
+        return connectorProducer;
+    }
+
+    public synchronized ConnectorConsumer getConnectorConsumer(String name, ConnectorClientConfig connectorConsumerConfig) {
+        ConnectorConsumer connectorConsumer = null;
+        if (connectorConsumers.containsKey(name) && !connectorConsumers.get(name).isClosed()) {
+            connectorConsumer = connectorConsumers.get(name);
+        } else if (connectorClients.containsKey(connectorConsumerConfig.getConnectorId())) {
+            connectorConsumer = createConnectorConsumer(name, connectorConsumerConfig);
+            connectorConsumers.put(name, connectorConsumer);
+        } else {
+            logWarning(MODULE_NAME, String.format("Connector with id %d doesn't exist", connectorConsumerConfig.getConnectorId()));
+        }
+        return connectorConsumer;
+    }
+
     private void closeConnectorClient(Integer connectorId, ConnectorClient connectorClient) {
         connectorProducers.values().stream()
-            .filter(connectorProducer -> connectorProducer.getConfig().getConnectorId().equals(connectorId))
+            .filter(connectorProducer -> connectorProducer.getConfig().getConnectorId() == connectorId)
             .forEach(ConnectorProducer::closeProducer);
 
         connectorConsumers.values().stream()
-            .filter(connectorConsumer -> connectorConsumer.getConfig().getConnectorId().equals(connectorId))
+            .filter(connectorConsumer -> connectorConsumer.getConfig().getConnectorId() == connectorId)
             .forEach(ConnectorConsumer::closeConsumer);
 
         connectorClient.closeSession();
     }
 
-    public synchronized ConnectorProducer getConnectorProducer(String name, ConnectorProducerConfig connectorProducerConfig) {
-        ConnectorProducer connectorProducer = null;
-        if (connectorProducers.containsKey(name)) {
-            connectorProducer = connectorProducers.get(name);
-        } else if (connectorClients.containsKey(connectorProducerConfig.getConnectorId())) {
-            ConnectorClient connectorClient = connectorClients.get(connectorProducerConfig.getConnectorId());
+    private ConnectorProducer createConnectorProducer(String name, ConnectorClientConfig connectorProducerConfig) {
+        ConnectorClient connectorClient = connectorClients.get(connectorProducerConfig.getConnectorId());
+        if (connectorClient.getSession() == null) {
             createConnectorSession(connectorClient);
-            ClientProducer clientProducer = null;
+        } else if (connectorClient.getSession().isClosed()) {
+            connectorClient.startSession();
+        }
+        ClientProducer clientProducer = null;
+        if (!connectorClient.isClosed()) {
             try {
                 clientProducer = connectorClient.createProducer(connectorProducerConfig.getTopicName());
                 connectorClient.startSession();
             } catch (ActiveMQException e) {
                 logWarning(MODULE_NAME, "Unable to create connector producer: " + e.getMessage());
             }
-            connectorProducer = new ConnectorProducer(name, connectorClient, clientProducer, connectorProducerConfig);
-            connectorProducers.put(name, connectorProducer);
         }
-        return connectorProducer;
+        return new ConnectorProducer(name, connectorClient, clientProducer, connectorProducerConfig);
     }
 
-    public synchronized ConnectorConsumer getConnectorConsumer(String name, ConnectorConsumerConfig connectorConsumerConfig) {
-        ConnectorConsumer connectorConsumer = null;
-        if (connectorConsumers.containsKey(name)) {
-            connectorConsumer = connectorConsumers.get(name);
-        } else if (connectorClients.containsKey(connectorConsumerConfig.getConnectorId())) {
-            ConnectorClient connectorClient = connectorClients.get(connectorConsumerConfig.getConnectorId());
-            if (connectorClient.getSession() == null) {
-                createConnectorSession(connectorClient);
-            }
-            ClientConsumer clientConsumer = null;
-
+    private ConnectorConsumer createConnectorConsumer(String name, ConnectorClientConfig connectorConsumerConfig) {
+        ConnectorClient connectorClient = connectorClients.get(connectorConsumerConfig.getConnectorId());
+        if (connectorClient.getSession() == null) {
+            createConnectorSession(connectorClient);
+        } else if (connectorClient.getSession().isClosed()) {
+            connectorClient.startSession();
+        }
+        ClientConsumer clientConsumer = null;
+        if (!connectorClient.isClosed()) {
             try {
                 clientConsumer = connectorClient.createConsumer(
                     connectorConsumerConfig.getTopicName(),
@@ -97,10 +120,8 @@ public enum ConnectorManager {
             } catch (ActiveMQException e) {
                 logWarning(MODULE_NAME, "Unable to create connector consumer: " + e.getMessage());
             }
-            connectorConsumer = new ConnectorConsumer(name, connectorClient, clientConsumer, connectorConsumerConfig);
-            connectorConsumers.put(name, connectorConsumer);
         }
-        return connectorConsumer;
+        return new ConnectorConsumer(name, connectorClient, clientConsumer, connectorConsumerConfig);
     }
 
     private void createConnectorSession(ConnectorClient connectorClient) {
@@ -112,121 +133,4 @@ public enum ConnectorManager {
             }
         }
     }
-
-//    public CompletableFuture<Void> createConnectorProducer(String name, Integer connectorId) {
-//        CompletableFuture<Void> completableFuture = CompletableFuture.completedFuture(null);
-//        if (!connectorProducers.containsKey(name)) {
-//            ConnectorClient connectorClient = connectorClients.get(connectorId);
-//            completableFuture = createConnectorSession(connectorId)
-//                .thenRunAsync(createConnectorProducerRunnable(name, connectorClient))
-//                .thenRunAsync(startSession(connectorClient));
-//        }
-//        return completableFuture;
-//    }
-
-//    public CompletableFuture<Void> createConnectorConsumer(String name, Integer connectorId, String topicName, String filter) {
-//        CompletableFuture<Void> completableFuture = CompletableFuture.completedFuture(null);
-//        if (!connectorConsumers.containsKey(name)) {
-//            ConnectorClient connectorClient = connectorClients.get(connectorId);
-//            completableFuture = createConnectorSession(connectorId)
-//                .thenRunAsync(createConnectorConsumerRunnable(name, connectorClient, topicName, filter))
-//                .thenRunAsync(startSession(connectorClient));
-//        }
-//        return completableFuture;
-//    }
-//
-//    private CompletableFuture<Void> createConnectorSession(Integer connectorId) {
-//        CompletableFuture<Void> completableFuture = CompletableFuture.completedFuture(null);
-//        if (connectorClients.containsKey(connectorId)
-//            && connectorClients.get(connectorId).getSession() == null) {
-//            completableFuture = CompletableFuture.runAsync(createConnectorSessionRunnable(connectorClients.get(connectorId)));
-//        }
-//        return completableFuture;
-//    }
-//
-//    private Runnable startSession(ConnectorClient connectorClient) {
-//        return () -> {
-//            try {
-//                connectorClient.startSession();
-//            } catch (ActiveMQException e) {
-//                logWarning(MODULE_NAME, "Unable to start connector session");
-//            }
-//        };
-//    }
-
-//    private Runnable createConnectorProducerRunnable(String name, ConnectorClient connectorClient) {
-//        return () -> {
-//            boolean isProducerCreated = false;
-//            while(!isProducerCreated) {
-//                if (Thread.currentThread().isInterrupted()) {
-//                    break;
-//                }
-//                try {
-//                    ClientProducer producer = connectorClient.createProducer();
-//                    ConnectorProducer connectorProducer = new ConnectorProducer(name, connectorClient, producer);
-//                    connectorProducers.put(name, connectorProducer);
-//                    isProducerCreated = true;
-//                    logInfo(MODULE_NAME, "Connector producer has been created.");
-//                } catch (ActiveMQException e) {
-//                    logWarning(MODULE_NAME, "Failed to create connector producer: " + e.getMessage());
-//                    logInfo(MODULE_NAME, "Going to create connector producer in 10 seconds.");
-//                    try {
-//                        Thread.sleep(10000);
-//                    } catch (InterruptedException ex) {
-//                        logInfo(MODULE_NAME, ex.getMessage());
-//                    }
-//                }
-//            }
-//        };
-//    }
-
-//    private Runnable createConnectorConsumerRunnable(String name, ConnectorClient connectorClient, String topicName, String filter) {
-//        return () -> {
-//            boolean isConsumerCreated = false;
-//            while(!isConsumerCreated) {
-//                if (Thread.currentThread().isInterrupted()) {
-//                    break;
-//                }
-//                try {
-//                    ClientConsumer consumer = connectorClient.createConsumer(topicName, filter);
-//                    ConnectorConsumer connectorConsumer = new ConnectorConsumer(name, connectorClient, consumer);
-//                    connectorConsumers.put(name, connectorConsumer);
-//                    isConsumerCreated = true;
-//                    logInfo(MODULE_NAME, "Connector consumer has been created.");
-//                } catch (ActiveMQException e) {
-//                    logWarning(MODULE_NAME, "Failed to create connector consumer: " + e.getMessage());
-//                    logInfo(MODULE_NAME, "Going to re-create connector consumer in 10 seconds.");
-//                    try {
-//                        Thread.sleep(10000);
-//                    } catch (InterruptedException ex) {
-//                        logInfo(MODULE_NAME, ex.getMessage());
-//                    }
-//                }
-//            }
-//        };
-//    }
-
-//    private Runnable createConnectorSessionRunnable(ConnectorClient connector) {
-//        return () -> {
-//            ClientSession session = null;
-//            boolean isConnectorSessionCreated = false;
-//            while(!isConnectorSessionCreated) {
-//                if (Thread.currentThread().isInterrupted()) {
-//                    break;
-//                }
-//                try {
-//                    connector.createSession();
-//                    isConnectorSessionCreated = true;
-//                } catch (Exception e) {
-//                    logWarning(MODULE_NAME, "Unable to create connector session: " + e.getMessage());
-//                    logInfo(MODULE_NAME, "Going to re-create connector session in 10 seconds.");
-//                    try {
-//                        Thread.sleep(10000);
-//                    } catch (InterruptedException ex) {
-//                        logInfo(MODULE_NAME, ex.getMessage());
-//                    }
-//                }
-//            }
-//        };
-//    }
 }

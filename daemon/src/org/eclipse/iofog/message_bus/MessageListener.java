@@ -29,7 +29,7 @@ public class MessageListener implements MessageHandler {
 
 	private final MessageCallback callback;
 	
-	public MessageListener(MessageCallback callback) {
+	MessageListener(MessageCallback callback) {
 		this.callback = callback;
 	}
 	
@@ -38,7 +38,8 @@ public class MessageListener implements MessageHandler {
 		try {
 			msg.acknowledge();
 		} catch (Exception exp) {
-			logWarning(MODULE_NAME, exp.getMessage());}
+			logWarning(MODULE_NAME, exp.getMessage());
+		}
 		
 		Message message = new Message(msg.getBytesProperty("message"));
 		callback.sendRealtimeMessage(message);

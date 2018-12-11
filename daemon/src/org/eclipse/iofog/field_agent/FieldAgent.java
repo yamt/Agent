@@ -444,9 +444,9 @@ public class FieldAgent implements IOFogModule {
                .map(routeJson -> {
                    String producerMicroserviceUuid = routeJson.getString("microserviceUuid");
                    boolean isLocalPublisher = routeJson.getBoolean("isLocal");
-                   ConnectorConsumerConfig connectorConsumerConfig = null;
+                   ConnectorClientConfig connectorConsumerConfig = null;
                    if (!isLocalPublisher) {
-                       connectorConsumerConfig = parseConnectorConsumerConfigJson(routeJson);
+                       connectorConsumerConfig = parseConnectorClientConfigJson(routeJson);
                    }
                    Producer producer = new Producer(producerMicroserviceUuid, isLocalPublisher, connectorConsumerConfig);
                    List<Receiver> receivers = parseReceiversJson(routeJson);
@@ -455,20 +455,12 @@ public class FieldAgent implements IOFogModule {
                .collect(toMap(route -> route.getProducer().getMicroserviceId(), Function.identity()));
     }
 
-    private ConnectorConsumerConfig parseConnectorConsumerConfigJson(JsonObject jsonObject) {
+    private ConnectorClientConfig parseConnectorClientConfigJson(JsonObject jsonObject) {
         JsonObject configJson = jsonObject.getJsonObject("config");
-        Integer connectorId = configJson.getInt("connectorId");
+        int connectorId = configJson.getInt("connectorId");
         String topicName = configJson.getString("topicName");
         String passKey = configJson.getString("passKey");
-        return new ConnectorConsumerConfig(connectorId, topicName, passKey);
-    }
-
-    private ConnectorProducerConfig parseConnectorProducerConfigJson(JsonObject jsonObject) {
-        JsonObject configJson = jsonObject.getJsonObject("config");
-        Integer connectorId = configJson.getInt("connectorId");
-        String topicName = configJson.getString("topicName");
-        String passKey = configJson.getString("passKey");
-        return new ConnectorProducerConfig(connectorId, topicName, passKey);
+        return new ConnectorClientConfig(connectorId, topicName, passKey);
     }
 
     private Map<Integer, ConnectorClient> parseConnectorsJson(JsonArray connectorsJson) {
@@ -476,7 +468,7 @@ public class FieldAgent implements IOFogModule {
             .boxed()
             .map(connectorsJson::getJsonObject)
             .map(connectorJson -> {
-                Integer connectorId = connectorJson.getInt("id");
+                int connectorId = connectorJson.getInt("id");
                 String host = connectorJson.getString("host");
                 int port = connectorJson.getInt("port");
                 String user = connectorJson.getString("user");
@@ -495,9 +487,9 @@ public class FieldAgent implements IOFogModule {
                 .map(receiverJson -> {
                     String receiver = receiverJson.getString("microserviceUuid");
                     boolean isLocalReceiver = receiverJson.getBoolean("isLocal");
-                    ConnectorProducerConfig connectorProducerConfig = null;
+                    ConnectorClientConfig connectorProducerConfig = null;
                     if (!isLocalReceiver) {
-                        connectorProducerConfig = parseConnectorProducerConfigJson(receiverJson);
+                        connectorProducerConfig = parseConnectorClientConfigJson(receiverJson);
                     }
                     return new Receiver(receiver, isLocalReceiver, connectorProducerConfig);
                 })

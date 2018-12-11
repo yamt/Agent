@@ -1,13 +1,13 @@
 package org.eclipse.iofog.microservice;
 
-import org.eclipse.iofog.connector_client.ConnectorConsumerConfig;
+import org.eclipse.iofog.connector_client.ConnectorClientConfig;
 
 public class Producer {
 	private String microserviceId;
 	private boolean isLocal;
-	private ConnectorConsumerConfig connectorConsumerConfig;
+	private ConnectorClientConfig connectorConsumerConfig;
 
-	public Producer(String microserviceId, boolean isLocal, ConnectorConsumerConfig connectorConsumerConfig) {
+	public Producer(String microserviceId, boolean isLocal, ConnectorClientConfig connectorConsumerConfig) {
 		this.microserviceId = microserviceId;
 		this.isLocal = isLocal;
 		this.connectorConsumerConfig = connectorConsumerConfig;
@@ -29,11 +29,11 @@ public class Producer {
 		isLocal = local;
 	}
 
-	public ConnectorConsumerConfig getConnectorConsumerConfig() {
+	public ConnectorClientConfig getConnectorConsumerConfig() {
 		return connectorConsumerConfig;
 	}
 
-	public void setConnectorConsumerConfig(ConnectorConsumerConfig connectorConsumerConfig) {
+	public void setConnectorConsumerConfig(ConnectorClientConfig connectorConsumerConfig) {
 		this.connectorConsumerConfig = connectorConsumerConfig;
 	}
 

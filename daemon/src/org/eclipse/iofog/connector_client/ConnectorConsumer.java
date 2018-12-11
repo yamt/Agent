@@ -9,15 +9,15 @@ import static org.eclipse.iofog.utils.logging.LoggingService.logWarning;
 public class ConnectorConsumer extends ConnectorEntity {
     public final static String MODULE_NAME = "Connector Consumer";
     private ClientConsumer consumer;
-    private ConnectorConsumerConfig config;
+    private ConnectorClientConfig config;
 
-    public ConnectorConsumer(String name, ConnectorClient connector, ClientConsumer consumer, ConnectorConsumerConfig config) {
+    ConnectorConsumer(String name, ConnectorClient connector, ClientConsumer consumer, ConnectorClientConfig config) {
         super(name, connector);
         this.consumer = consumer;
         this.config = config;
     }
 
-    public ConnectorConsumerConfig getConfig() {
+    public ConnectorClientConfig getConfig() {
         return config;
     }
 
@@ -30,12 +30,16 @@ public class ConnectorConsumer extends ConnectorEntity {
     }
 
     public void closeConsumer() {
-        if (!consumer.isClosed()) {
+        if (consumer != null && !consumer.isClosed()) {
             try {
                 consumer.close();
             } catch (ActiveMQException e) {
                 logWarning(MODULE_NAME, "Unable to close connector consumer: " + e.getMessage());
             }
         }
+    }
+
+    public synchronized boolean isClosed() {
+        return consumer == null || consumer.isClosed();
     }
 }
