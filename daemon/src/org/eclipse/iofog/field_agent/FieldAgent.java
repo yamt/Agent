@@ -473,7 +473,8 @@ public class FieldAgent implements IOFogModule {
                 int port = connectorJson.getInt("port");
                 String user = connectorJson.getString("user");
                 String password = connectorJson.getString("password");
-                ConnectorConfig connectorConfig = new ConnectorConfig(host, port, user, password);
+                boolean isDevModeEnabled = connectorJson.getBoolean("isDevModeEnabled");
+                ConnectorConfig connectorConfig = new ConnectorConfig(host, port, user, password, isDevModeEnabled);
                 return new ConnectorClient(connectorId, connectorConfig);
             })
             .collect(toMap(ConnectorClient::getId, Function.identity()));

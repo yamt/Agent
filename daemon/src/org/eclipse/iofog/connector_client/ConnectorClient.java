@@ -5,6 +5,7 @@ import org.apache.activemq.artemis.api.core.TransportConfiguration;
 import org.apache.activemq.artemis.api.core.client.*;
 import org.apache.activemq.artemis.core.remoting.impl.netty.NettyConnectorFactory;
 import org.apache.activemq.artemis.core.remoting.impl.netty.TransportConstants;
+import org.eclipse.iofog.utils.configuration.Configuration;
 
 import java.util.HashMap;
 import java.util.Map;
@@ -35,9 +36,9 @@ public class ConnectorClient {
     }
 
     void createSession() throws Exception {
-        Map<String, Object> connectionParams = new HashMap<>();
-        connectionParams.put(TransportConstants.PORT_PROP_NAME, connectorConfig.getPort());
-        connectionParams.put(TransportConstants.HOST_PROP_NAME, connectorConfig.getHost());
+        Map<String, Object> connectionParams = connectorConfig.isDevModeEnabled()
+            ? getDevModeConnectionParams()
+            : getNonDevModeConnectionParams();
 
         TransportConfiguration transportConfiguration =
             new TransportConfiguration(
@@ -77,5 +78,22 @@ public class ConnectorClient {
 
     boolean isClosed() {
         return session == null || session.isClosed();
+    }
+
+    private Map<String, Object> getNonDevModeConnectionParams() {
+        Map<String, Object> connectionParams = new HashMap<>();
+        connectionParams.put(TransportConstants.PORT_PROP_NAME, connectorConfig.getPort());
+        connectionParams.put(TransportConstants.HOST_PROP_NAME, connectorConfig.getHost());
+        return connectionParams;
+    }
+
+    private Map<String, Object> getDevModeConnectionParams() {
+        Map<String, Object> connectionParams = new HashMap<>();
+        connectionParams.put(TransportConstants.PORT_PROP_NAME, connectorConfig.getPort());
+        connectionParams.put(TransportConstants.HOST_PROP_NAME, connectorConfig.getHost());
+        connectionParams.put(TransportConstants.SSL_ENABLED_PROP_NAME, true);
+        connectionParams.put(TransportConstants.TRUSTSTORE_PATH_PROP_NAME, Configuration.getConnectorTruststore());
+        connectionParams.put(TransportConstants.TRUSTSTORE_PASSWORD_PROP_NAME, Configuration.getConnectorTruststorePassword());
+        return connectionParams;
     }
 }

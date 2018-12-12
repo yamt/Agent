@@ -5,44 +5,34 @@ public class ConnectorConfig {
 	private int port;
 	private String user;
 	private String password;
+	private boolean isDevModeEnabled;
 
-	public ConnectorConfig(String host, int port, String user, String password) {
+	public ConnectorConfig(String host, int port, String user, String password, boolean isDevModeEnabled) {
 		this.host = host;
 		this.port = port;
 		this.user = user;
 		this.password = password;
+		this.isDevModeEnabled = isDevModeEnabled;
 	}
 
 	public String getHost() {
 		return host;
 	}
 
-	public void setHost(String host) {
-		this.host = host;
-	}
-
 	public int getPort() {
 		return port;
-	}
-
-	public void setPort(int port) {
-		this.port = port;
 	}
 
 	public String getUser() {
 		return user;
 	}
 
-	public void setUser(String user) {
-		this.user = user;
-	}
-
 	public String getPassword() {
 		return password;
 	}
 
-	public void setPassword(String password) {
-		this.password = password;
+	public boolean isDevModeEnabled() {
+		return isDevModeEnabled;
 	}
 
 	@Override
@@ -53,6 +43,7 @@ public class ConnectorConfig {
 		ConnectorConfig that = (ConnectorConfig) o;
 
 		if (port != that.port) return false;
+		if (isDevModeEnabled != that.isDevModeEnabled) return false;
 		if (!host.equals(that.host)) return false;
 		if (!user.equals(that.user)) return false;
 		return password.equals(that.password);
@@ -64,6 +55,7 @@ public class ConnectorConfig {
 		result = 31 * result + port;
 		result = 31 * result + user.hashCode();
 		result = 31 * result + password.hashCode();
+		result = 31 * result + (isDevModeEnabled ? 1 : 0);
 		return result;
 	}
 }

@@ -51,7 +51,9 @@ public enum CommandLineConfigParam {
     GPS_COORDINATES (GpsMode.AUTO.name().toLowerCase(), "gps", "gps", "gpscoordinates"),
     POST_DIAGNOSTICS_FREQ ("10", "df", "post_diagnostics_freq", "postdiagnosticsfreq"),
     FOG_TYPE ("auto", "ft", "fog_type", ""),
-    DEV_MODE ("on", "dev", "dev_mode", "");
+    DEV_MODE ("on", "dev", "dev_mode", ""),
+    CONNECTOR_TRUSTSTORE ("connector-truststore.jks", "connector-truststore", "connnector_truststore", ""),
+    CONNECTOR_TRUSTORE_PASSWORD ("iofog", "connector-truststore-password", "connector_truststore_password", "");
 
     private final String commandName;
     private final String xmlTag;

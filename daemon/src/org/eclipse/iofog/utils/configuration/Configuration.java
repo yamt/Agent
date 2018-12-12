@@ -91,6 +91,8 @@ public final class Configuration {
     private static ArchitectureType fogType;
     private static final Map<String, Object> defaultConfig;
     private static boolean developerMode;
+    private static String connectorTruststore;
+    private static String connectorTruststorePassword;
 
     public static boolean debugging = false;
 
@@ -247,6 +249,22 @@ public final class Configuration {
 
     public static void setDeveloperMode(boolean developerMode) {
         Configuration.developerMode = developerMode;
+    }
+
+    public static String getConnectorTruststore() {
+        return connectorTruststore;
+    }
+
+    public static void setConnectorTruststore(String connectorTruststore) {
+        Configuration.connectorTruststore = connectorTruststore;
+    }
+
+    public static String getConnectorTruststorePassword() {
+        return connectorTruststorePassword;
+    }
+
+    public static void setConnectorTruststorePassword(String connectorTruststorePassword) {
+        Configuration.connectorTruststorePassword = connectorTruststorePassword;
     }
 
     /**
@@ -550,6 +568,14 @@ public final class Configuration {
                 case DEV_MODE:
                     setNode(DEV_MODE, value, configFile, configElement);
                     setDeveloperMode(!value.equals("off"));
+                    break;
+                case CONNECTOR_TRUSTSTORE:
+                    setNode(CONNECTOR_TRUSTSTORE, value, configFile, configElement);
+                    setConnectorTruststore(value);
+                    break;
+                case CONNECTOR_TRUSTORE_PASSWORD:
+                    setNode(CONNECTOR_TRUSTORE_PASSWORD , value, configFile, configElement);
+                    setConnectorTruststorePassword(value);
                     break;
                 default:
                     throw new ConfigurationItemException("Invalid parameter -" + option);
