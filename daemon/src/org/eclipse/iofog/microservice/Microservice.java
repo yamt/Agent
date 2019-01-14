@@ -21,6 +21,7 @@ import java.util.List;
  */
 public class Microservice {
 
+    public static final Object deleteLock = new Object();
     private final String microserviceUuid; //container name
     private final String imageName;
     private List<PortMapping> portMappings;
@@ -33,6 +34,7 @@ public class Microservice {
     private long logSize;
     private List<VolumeMapping> volumeMappings;
     private boolean isUpdating;
+
     private boolean delete;
     private boolean deleteWithCleanup;
 
@@ -122,11 +124,11 @@ public class Microservice {
         this.volumeMappings = volumeMappings;
     }
 
-	public boolean isUpdating() {
+	public synchronized boolean isUpdating() {
 		return isUpdating;
 	}
 
-	public void setUpdating(boolean updating) {
+	public synchronized void setUpdating(boolean updating) {
 		isUpdating = updating;
 	}
 

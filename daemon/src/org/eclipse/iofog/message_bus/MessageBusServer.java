@@ -37,6 +37,11 @@ import java.util.HashSet;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 
+import java.util.HashMap;
+import java.util.HashSet;
+import java.util.Map;
+import java.util.concurrent.ConcurrentHashMap;
+
 /**
  * ActiveMQ server
  * 
@@ -44,7 +49,8 @@ import java.util.concurrent.ConcurrentHashMap;
  *
  */
 public class MessageBusServer {
-	
+
+	public static final Object messageBusSessionLock = new Object();
 	private static final String MODULE_NAME = "Message Bus Server";
 	private ClientSessionFactory sf;
 	private ActiveMQServer server;
@@ -122,21 +128,23 @@ public class MessageBusServer {
 	 * @throws Exception
 	 */
 	void initialize() throws Exception {
-		messageBusSession = sf.createSession(true, true, 0);
-		ClientSession.QueueQuery queueQuery = messageBusSession.queueQuery(new SimpleString(Constants.ADDRESS));
-		if (queueQuery.isExists())
-			messageBusSession.deleteQueue(Constants.ADDRESS);
-		queueQuery = messageBusSession.queueQuery(new SimpleString(Constants.COMMAND_LINE_ADDRESS));
-		if (queueQuery.isExists())
-			messageBusSession.deleteQueue(Constants.COMMAND_LINE_ADDRESS);
-		messageBusSession.createQueue(Constants.ADDRESS, RoutingType.ANYCAST, Constants.ADDRESS, false);
-		messageBusSession.createQueue(Constants.COMMAND_LINE_ADDRESS, RoutingType.ANYCAST, Constants.COMMAND_LINE_ADDRESS, false);
+	    synchronized(messageBusSessionLock) {
+            messageBusSession = sf.createSession(true, true, 0);
+            ClientSession.QueueQuery queueQuery = messageBusSession.queueQuery(new SimpleString(Constants.ADDRESS));
+            if (queueQuery.isExists())
+                messageBusSession.deleteQueue(Constants.ADDRESS);
+            queueQuery = messageBusSession.queueQuery(new SimpleString(Constants.COMMAND_LINE_ADDRESS));
+            if (queueQuery.isExists())
+                messageBusSession.deleteQueue(Constants.COMMAND_LINE_ADDRESS);
+            messageBusSession.createQueue(Constants.ADDRESS, RoutingType.ANYCAST, Constants.ADDRESS, false);
+            messageBusSession.createQueue(Constants.COMMAND_LINE_ADDRESS, RoutingType.ANYCAST, Constants.COMMAND_LINE_ADDRESS, false);
 
-		commandlineProducer = messageBusSession.createProducer(Constants.COMMAND_LINE_ADDRESS);
-		
-		commandlineConsumer = messageBusSession.createConsumer(Constants.COMMAND_LINE_ADDRESS, String.format("receiver = '%s'", "iofog.commandline.command"));
-		commandlineConsumer.setMessageHandler(new CommandLineHandler());
-		messageBusSession.start();
+			commandlineProducer = messageBusSession.createProducer(Constants.COMMAND_LINE_ADDRESS);
+
+			commandlineConsumer = messageBusSession.createConsumer(Constants.COMMAND_LINE_ADDRESS, String.format("receiver = '%s'", "iofog.commandline.command"));
+			commandlineConsumer.setMessageHandler(new CommandLineHandler());
+			messageBusSession.start();
+		}
 	}
 	
 	/**
@@ -145,11 +153,15 @@ public class MessageBusServer {
 	 * @param name - ID of {@link Microservice}
 	 * @throws Exception
 	 */
-	void createConsumer(String name) throws Exception {
-		if (consumers == null)
+	void createCosumer(String name) throws Exception {
+		if (consumers == null) {
 			consumers = new ConcurrentHashMap<>();
+		}
 
-		ClientConsumer consumer = messageBusSession.createConsumer(Constants.ADDRESS, String.format("receiver = '%s'", name));
+		ClientConsumer consumer;
+		synchronized (messageBusSessionLock) {
+			consumer = messageBusSession.createConsumer(Constants.ADDRESS, String.format("receiver = '%s'", name));
+		}
 		consumers.put(name, consumer);
 	}
 	
@@ -187,9 +199,13 @@ public class MessageBusServer {
 	 * @throws Exception
 	 */
 	void createProducer(String name) throws Exception {
-		if (producers == null)
+		if (producers == null) {
 			producers = new ConcurrentHashMap<>();
-		ClientProducer producer = messageBusSession.createProducer(Constants.ADDRESS);
+		}
+		ClientProducer producer;
+		synchronized (messageBusSessionLock) {
+			producer = messageBusSession.createProducer(Constants.ADDRESS);
+		}
 		producers.put(name, producer);
 	}
 	

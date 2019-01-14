@@ -17,6 +17,7 @@ import org.apache.activemq.artemis.api.core.client.ClientMessage;
 import org.apache.activemq.artemis.api.core.client.MessageHandler;
 import org.eclipse.iofog.command_line.CommandLineParser;
 
+import static org.eclipse.iofog.message_bus.MessageBusServer.messageBusSessionLock;
 import static org.eclipse.iofog.utils.logging.LoggingService.logWarning;
 
 /**
@@ -42,7 +43,9 @@ public class CommandLineHandler implements MessageHandler {
 		response.putObjectProperty("receiver", "iofog.commandline.response");
 		
 		try {
-			MessageBusServer.getCommandlineProducer().send(response);
+			synchronized (messageBusSessionLock) {
+				MessageBusServer.getCommandlineProducer().send(response);
+			}
 		} catch (Exception exp) {
 			logWarning(MODULE_NAME, exp.getMessage());
 		}

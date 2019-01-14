@@ -16,6 +16,7 @@ import org.apache.activemq.artemis.api.core.client.ClientMessage;
 import org.apache.activemq.artemis.api.core.client.MessageHandler;
 import org.eclipse.iofog.local_api.MessageCallback;
 
+import static org.eclipse.iofog.message_bus.MessageBusServer.messageBusSessionLock;
 import static org.eclipse.iofog.utils.logging.LoggingService.logWarning;
 
 /**
@@ -36,7 +37,9 @@ public class MessageListener implements MessageHandler {
 	@Override
 	public void onMessage(ClientMessage msg) {
 		try {
-			msg.acknowledge();
+			synchronized (messageBusSessionLock) {
+				msg.acknowledge();
+			}
 		} catch (Exception exp) {
 			logWarning(MODULE_NAME, exp.getMessage());
 		}

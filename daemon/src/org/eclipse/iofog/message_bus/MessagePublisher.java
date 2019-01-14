@@ -26,7 +26,10 @@ import org.eclipse.iofog.utils.logging.LoggingService;
 
 import java.util.List;
 
+import java.util.List;
+
 import static org.eclipse.iofog.message_bus.MessageBus.MODULE_NAME;
+import static org.eclipse.iofog.message_bus.MessageBusServer.messageBusSessionLock;
 import static org.eclipse.iofog.utils.logging.LoggingService.logWarning;
 
 /**
@@ -100,7 +103,9 @@ public class MessagePublisher implements AutoCloseable {
 			ClientMessage msg = session.createMessage(false);
 			msg.putObjectProperty("receiver", name);
 			msg.putBytesProperty("message", bytes);
-			producer.send(msg);
+			synchronized (messageBusSessionLock) {
+				producer.send(msg);
+			}
 		}
 	}
 

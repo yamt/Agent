@@ -452,8 +452,13 @@ public final class Configuration {
                     setControllerCert(value);
                     break;
                 case DOCKER_URL:
-                    setNode(DOCKER_URL, value, configFile, configElement);
-                    setDockerUrl(value);
+                    if (value.startsWith("tcp://") || value.startsWith("unix://")) {
+                        setNode(DOCKER_URL, value, configFile, configElement);
+                        setDockerUrl(value);
+                    } else {
+                        messageMap.put(option, "Unsupported protocol scheme. Only 'tcp://' or 'unix://' supported.\n");
+                        break;
+                    }
                     break;
                 case NETWORK_INTERFACE:
                     if (defaults || isValidNetworkInterface(value.trim())) {
@@ -471,8 +476,8 @@ public final class Configuration {
                         messageMap.put(option, "Option -" + option + " has invalid value: " + value);
                         break;
                     }
-                    if (Float.parseFloat(value) < 0.5 || Float.parseFloat(value) > 1024) {
-                        messageMap.put(option, "Log disk limit range must be 0.5 to 1024 GB");
+                    if (Float.parseFloat(value) < 0.5 || Float.parseFloat(value) > 2) {
+                        messageMap.put(option, "Log disk limit range must be 0.5 to 2 GB");
                         break;
                     }
                     setNode(LOG_DISK_CONSUMPTION_LIMIT, value, configFile, configElement);
@@ -554,6 +559,10 @@ public final class Configuration {
                     setPostDiagnosticsFreq(Integer.parseInt(value));
                     break;
                 case WATCHDOG_ENABLED:
+                    if (!"off".equalsIgnoreCase(value) && !"on".equalsIgnoreCase(value)) {
+                        messageMap.put(option, "Option -" + option + " has invalid value: " + value);
+                        break;
+                    }
                     setNode(WATCHDOG_ENABLED, value, configFile, configElement);
                     setWatchdogEnabled(!value.equals("off"));
                     break;
