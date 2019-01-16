@@ -37,11 +37,6 @@ import java.util.HashSet;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 
-import java.util.HashMap;
-import java.util.HashSet;
-import java.util.Map;
-import java.util.concurrent.ConcurrentHashMap;
-
 /**
  * ActiveMQ server
  * 
@@ -153,7 +148,7 @@ public class MessageBusServer {
 	 * @param name - ID of {@link Microservice}
 	 * @throws Exception
 	 */
-	void createCosumer(String name) throws Exception {
+	void createConsumer(String name) throws Exception {
 		if (consumers == null) {
 			consumers = new ConcurrentHashMap<>();
 		}

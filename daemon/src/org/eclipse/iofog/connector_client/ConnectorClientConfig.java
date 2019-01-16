@@ -2,12 +2,12 @@ package org.eclipse.iofog.connector_client;
 
 public class ConnectorClientConfig {
     private int connectorId;
-    private String topicName;
+    private String publisherId;
     private String passKey;
 
-    public ConnectorClientConfig(int connectorId, String topicName, String passKey) {
+    public ConnectorClientConfig(int connectorId, String publisherId, String passKey) {
         this.connectorId = connectorId;
-        this.topicName = topicName;
+        this.publisherId = publisherId;
         this.passKey = passKey;
     }
 
@@ -15,8 +15,8 @@ public class ConnectorClientConfig {
         return connectorId;
     }
 
-    public String getTopicName() {
-        return topicName;
+    public String getPublisherId() {
+        return publisherId;
     }
 
     public String getPassKey() {
@@ -31,14 +31,14 @@ public class ConnectorClientConfig {
         ConnectorClientConfig that = (ConnectorClientConfig) o;
 
         if (connectorId != that.connectorId) return false;
-        if (!topicName.equals(that.topicName)) return false;
+        if (!publisherId.equals(that.publisherId)) return false;
         return passKey.equals(that.passKey);
     }
 
     @Override
     public int hashCode() {
         int result = connectorId;
-        result = 31 * result + topicName.hashCode();
+        result = 31 * result + publisherId.hashCode();
         result = 31 * result + passKey.hashCode();
         return result;
     }

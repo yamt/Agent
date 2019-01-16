@@ -472,26 +472,28 @@ public class FieldAgent implements IOFogModule {
     private ConnectorClientConfig parseConnectorClientConfigJson(JsonObject jsonObject) {
         JsonObject configJson = jsonObject.getJsonObject("config");
         int connectorId = configJson.getInt("connectorId");
-        String topicName = configJson.getString("topicName");
+        String publisherId = configJson.getString("publisherId");
         String passKey = configJson.getString("passKey");
-        return new ConnectorClientConfig(connectorId, topicName, passKey);
+        return new ConnectorClientConfig(connectorId, publisherId, passKey);
     }
 
-    private Map<Integer, ConnectorClient> parseConnectorsJson(JsonArray connectorsJson) {
+    private Map<Integer, ConnectorConfig> parseConnectorsJson(JsonArray connectorsJson) {
         return IntStream.range(0, connectorsJson.size())
             .boxed()
             .map(connectorsJson::getJsonObject)
-            .map(connectorJson -> {
-                int connectorId = connectorJson.getInt("id");
+            .collect(toMap((JsonObject connectorJson) -> connectorJson.getInt("id"), (JsonObject connectorJson) -> {
+                String name = connectorJson.getString("name");
                 String host = connectorJson.getString("host");
                 int port = connectorJson.getInt("port");
                 String user = connectorJson.getString("user");
-                String password = connectorJson.getString("password");
-                boolean isDevModeEnabled = connectorJson.getBoolean("isDevModeEnabled");
-                ConnectorConfig connectorConfig = new ConnectorConfig(host, port, user, password, isDevModeEnabled);
-                return new ConnectorClient(connectorId, connectorConfig);
-            })
-            .collect(toMap(ConnectorClient::getId, Function.identity()));
+                String userPassword = connectorJson.getString("userPassword");
+                boolean isDevModeEnabled = connectorJson.getBoolean("devMode");
+                String cert = connectorJson.getString("cert");
+                boolean selfSignedCerts = connectorJson.getBoolean("selfSignedCerts");
+                String keystorePassword = connectorJson.getString("keystorePassword");
+                return new ConnectorConfig(name, host, port, user, userPassword,
+                    isDevModeEnabled, cert, selfSignedCerts, keystorePassword);
+            }));
     }
 
     private List<Receiver> parseReceiversJson(JsonObject jsonObject) {
@@ -560,8 +562,8 @@ public class FieldAgent implements IOFogModule {
                 connectorsJson = result.getJsonArray("connectors");
                 saveFile(connectorsJson, filesPath + filename);
             }
-            Map<Integer, ConnectorClient> connectorsMap = parseConnectorsJson(connectorsJson);
-            connectorManager.setConnectorClients(connectorsMap);
+            Map<Integer, ConnectorConfig> connectorsMap = parseConnectorsJson(connectorsJson);
+            connectorManager.setConnectors(connectorsMap);
         } catch (CertificateException | SSLHandshakeException e) {
             verificationFailed();
         } catch (Exception e) {

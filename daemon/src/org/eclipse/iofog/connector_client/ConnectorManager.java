@@ -1,8 +1,7 @@
 package org.eclipse.iofog.connector_client;
 
 import org.apache.activemq.artemis.api.core.ActiveMQException;
-import org.apache.activemq.artemis.api.core.client.ClientConsumer;
-import org.apache.activemq.artemis.api.core.client.ClientProducer;
+import org.apache.activemq.artemis.api.core.client.ClientSession;
 
 import java.util.HashMap;
 import java.util.Map;
@@ -16,7 +15,7 @@ public enum ConnectorManager {
 
     private Map<String, ConnectorProducer> connectorProducers = new HashMap<>();
     private Map<String, ConnectorConsumer> connectorConsumers = new HashMap<>();
-    private Map<Integer, ConnectorClient> connectorClients = new HashMap<>();
+    private Map<Integer, ConnectorSessionPool> connectorSessionPoolMap = new HashMap<>();
 
     public synchronized Map<String, ConnectorProducer> getConnectorProducers() {
         return connectorProducers;
@@ -26,30 +25,34 @@ public enum ConnectorManager {
         return connectorConsumers;
     }
 
-    public synchronized void setConnectorClients(Map<Integer, ConnectorClient> connectorClients) {
-        for (Integer connectorId : connectorClients.keySet()) {
-            if (this.connectorClients.containsKey(connectorId)) {
-                ConnectorClient oldConnectorClient = this.connectorClients.get(connectorId);
-                ConnectorClient newConnectorClient = connectorClients.get(connectorId);
-                if (!oldConnectorClient.getConnectorConfig().equals(newConnectorClient.getConnectorConfig())) {
-                    closeConnectorClient(connectorId, oldConnectorClient);
-                    this.connectorClients.put(connectorId, newConnectorClient);
+    public synchronized void setConnectors(Map<Integer, ConnectorConfig> connectors) {
+        connectors.forEach((id, config) -> {
+            if (connectorSessionPoolMap.containsKey(id)) {
+                ConnectorSessionPool connectorSessionPool = connectorSessionPoolMap.get(id);
+                if (!connectorSessionPool.getConnectorConfig().equals(config)) {
+                    try {
+                        connectorSessionPool.shutdown();
+                    } catch (ActiveMQException e) {
+                        logWarning(MODULE_NAME, "Connector session pool shutdown error: " + e.getMessage());
+                    }
+                    addConnectorSessionPool(id, config);
                 }
             } else {
-                this.connectorClients.put(connectorId, connectorClients.get(connectorId));
+                addConnectorSessionPool(id, config);
             }
-        }
-        this.connectorClients.entrySet().stream()
-            .filter(entry -> !connectorClients.containsKey(entry.getKey()))
-            .forEach(entry -> closeConnectorClient(entry.getKey(), entry.getValue()));
-        this.connectorClients.entrySet().removeIf(entry -> !connectorClients.containsKey(entry.getKey()));
+        });
+
+        this.connectorSessionPoolMap.entrySet().stream()
+            .filter(entry -> !connectors.containsKey(entry.getKey()))
+            .forEach(entry -> closeConnectorClients(entry.getKey(), entry.getValue()));
+        this.connectorSessionPoolMap.entrySet().removeIf(entry -> !connectors.containsKey(entry.getKey()));
     }
 
     public synchronized ConnectorProducer getConnectorProducer(String name, ConnectorClientConfig connectorProducerConfig) {
         ConnectorProducer connectorProducer = null;
         if (connectorProducers.containsKey(name) && !connectorProducers.get(name).isClosed()) {
             connectorProducer = connectorProducers.get(name);
-        } else if (connectorClients.containsKey(connectorProducerConfig.getConnectorId())) {
+        } else if (connectorSessionPoolMap.containsKey(connectorProducerConfig.getConnectorId())) {
             connectorProducer = createConnectorProducer(name, connectorProducerConfig);
             connectorProducers.put(name, connectorProducer);
         } else {
@@ -62,7 +65,7 @@ public enum ConnectorManager {
         ConnectorConsumer connectorConsumer = null;
         if (connectorConsumers.containsKey(name) && !connectorConsumers.get(name).isClosed()) {
             connectorConsumer = connectorConsumers.get(name);
-        } else if (connectorClients.containsKey(connectorConsumerConfig.getConnectorId())) {
+        } else if (connectorSessionPoolMap.containsKey(connectorConsumerConfig.getConnectorId())) {
             connectorConsumer = createConnectorConsumer(name, connectorConsumerConfig);
             connectorConsumers.put(name, connectorConsumer);
         } else {
@@ -71,7 +74,37 @@ public enum ConnectorManager {
         return connectorConsumer;
     }
 
-    private void closeConnectorClient(Integer connectorId, ConnectorClient connectorClient) {
+    private ConnectorProducer createConnectorProducer(String name, ConnectorClientConfig connectorProducerConfig) {
+        ConnectorProducer producer = null;
+        try {
+            ClientSession session = connectorSessionPoolMap.get(connectorProducerConfig.getConnectorId()).getSession();
+            producer = new ConnectorProducer(name, session, connectorProducerConfig);
+        } catch (Exception e) {
+            logWarning(MODULE_NAME, "Connector producer creation error: " + e.getMessage());
+        }
+        return producer;
+    }
+
+    private ConnectorConsumer createConnectorConsumer(String name, ConnectorClientConfig connectorConsumerConfig) {
+        ConnectorConsumer consumer = null;
+        try {
+            ClientSession session = connectorSessionPoolMap.get(connectorConsumerConfig.getConnectorId()).getSession();
+            consumer = new ConnectorConsumer(name, session, connectorConsumerConfig);
+        } catch (Exception e) {
+            logWarning(MODULE_NAME, "Connector consumer creation error: " + e.getMessage());
+        }
+        return consumer;
+    }
+
+    private void addConnectorSessionPool(int id, ConnectorConfig config) {
+        try {
+            connectorSessionPoolMap.put(id, ConnectorSessionPool.create(config));
+        } catch (Exception e) {
+            logWarning(MODULE_NAME, "Connector session pool creation error: " + e.getMessage());
+        }
+    }
+
+    private void closeConnectorClients(Integer connectorId, ConnectorSessionPool connectorSessionPool) {
         connectorProducers.values().stream()
             .filter(connectorProducer -> connectorProducer.getConfig().getConnectorId() == connectorId)
             .forEach(ConnectorProducer::closeProducer);
@@ -80,57 +113,10 @@ public enum ConnectorManager {
             .filter(connectorConsumer -> connectorConsumer.getConfig().getConnectorId() == connectorId)
             .forEach(ConnectorConsumer::closeConsumer);
 
-        connectorClient.closeSession();
-    }
-
-    private ConnectorProducer createConnectorProducer(String name, ConnectorClientConfig connectorProducerConfig) {
-        ConnectorClient connectorClient = connectorClients.get(connectorProducerConfig.getConnectorId());
-        if (connectorClient.getSession() == null) {
-            createConnectorSession(connectorClient);
-        } else if (connectorClient.getSession().isClosed()) {
-            connectorClient.startSession();
-        }
-        ClientProducer clientProducer = null;
-        if (!connectorClient.isClosed()) {
-            try {
-                clientProducer = connectorClient.createProducer(connectorProducerConfig.getTopicName());
-                connectorClient.startSession();
-            } catch (ActiveMQException e) {
-                logWarning(MODULE_NAME, "Unable to create connector producer: " + e.getMessage());
-            }
-        }
-        return new ConnectorProducer(name, connectorClient, clientProducer, connectorProducerConfig);
-    }
-
-    private ConnectorConsumer createConnectorConsumer(String name, ConnectorClientConfig connectorConsumerConfig) {
-        ConnectorClient connectorClient = connectorClients.get(connectorConsumerConfig.getConnectorId());
-        if (connectorClient.getSession() == null) {
-            createConnectorSession(connectorClient);
-        } else if (connectorClient.getSession().isClosed()) {
-            connectorClient.startSession();
-        }
-        ClientConsumer clientConsumer = null;
-        if (!connectorClient.isClosed()) {
-            try {
-                clientConsumer = connectorClient.createConsumer(
-                    connectorConsumerConfig.getTopicName(),
-                    connectorConsumerConfig.getPassKey()
-                );
-                connectorClient.startSession();
-            } catch (ActiveMQException e) {
-                logWarning(MODULE_NAME, "Unable to create connector consumer: " + e.getMessage());
-            }
-        }
-        return new ConnectorConsumer(name, connectorClient, clientConsumer, connectorConsumerConfig);
-    }
-
-    private void createConnectorSession(ConnectorClient connectorClient) {
-        if (connectorClient.getSession() == null) {
-            try {
-                connectorClient.createSession();
-            } catch (Exception e) {
-                logWarning(MODULE_NAME, "Unable to create connector session: " + e.getMessage());
-            }
+        try {
+            connectorSessionPool.shutdown();
+        } catch (ActiveMQException e) {
+            logWarning(MODULE_NAME, "Connector session pool shutdown error: " + e.getMessage());
         }
     }
 }
