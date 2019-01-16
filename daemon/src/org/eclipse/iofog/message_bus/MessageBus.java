@@ -125,8 +125,8 @@ public class MessageBus implements IOFogModule {
                 try {
                     messageBusServer.createProducer(publisher);
                 } catch (Exception e) {
-                    LoggingService.logWarning(MODULE_NAME + "(" + publisher + ")",
-                        "unable to start publisher module --> " + e.getMessage());
+                    LoggingService.logError(MODULE_NAME + "(" + publisher + ")",
+                        "unable to start publisher module --> " + e.getMessage(), e);
                 }
                 publishers.put(publisher, new MessagePublisher(route, messageBusServer.getProducer(publisher)
                 ));
@@ -138,8 +138,8 @@ public class MessageBus implements IOFogModule {
                         try {
                             messageBusServer.createConsumer(item.getMicroserviceUuid());
                         } catch (Exception e) {
-                            LoggingService.logWarning(MODULE_NAME + "(" + item + ")",
-                                "unable to start receiver module --> " + e.getMessage());
+                            LoggingService.logError(MODULE_NAME + "(" + item + ")",
+                                "unable to start receiver module --> " + e.getMessage(), e);
                         }
                         return new MessageReceiver(
                             item,
@@ -168,7 +168,7 @@ public class MessageBus implements IOFogModule {
                 lastSpeedMessageCount = msgs;
                 lastSpeedTime = now;
             } catch (Exception exp) {
-                logWarning(exp.getMessage());
+                logError(exp.getMessage(), exp);
             }
         }
     };
@@ -179,24 +179,24 @@ public class MessageBus implements IOFogModule {
     private final Runnable checkMessageServerStatus = () -> {
         while (true) {
             try {
-                Thread.sleep(10000);
+                Thread.sleep(5000);
 
-                logInfo("check message bus server status");
+                logInfo("Check message bus server status");
                 if (!messageBusServer.isServerActive()) {
-                    logWarning("server is not active. restarting...");
+                    logWarning("Server is not active. restarting...");
                     stop();
                     try {
                         messageBusServer.startServer();
-                        logInfo("server restarted");
+                        logInfo("Server restarted");
                         init();
                     } catch (Exception e) {
-                        logWarning("server restart failed --> " + e.getMessage());
+                        logError("Server restart failed --> " + e.getMessage(), e);
                     }
                 }
 
                 publishers.forEach((publisherName, messagePublisher) -> {
                     if (messageBusServer.isProducerClosed(publisherName)) {
-                        logWarning("producer module for " + publisherName + " stopped. restarting...");
+                        logWarning("Producer module for " + publisherName + " stopped. restarting...");
                         messagePublisher.close();
                         Route route = routes.get(publisherName);
                         if (route == null || route.getReceivers() == null || route.getReceivers().size() == 0) {
@@ -207,9 +207,9 @@ public class MessageBus implements IOFogModule {
                                 publishers.put(publisherName, new MessagePublisher(
                                     route,
                                     messageBusServer.getProducer(publisherName)));
-                                logInfo("producer module restarted");
+                                logInfo("Producer module restarted");
                             } catch (Exception e) {
-                                logWarning("unable to restart producer module for " + publisherName + " --> " + e.getMessage());
+                                logError("Unable to restart producer module for " + publisher + " --> " + e.getMessage(), e);
                             }
                         }
                     } else if (!messagePublisher.getRoute().getProducer().isLocal()
@@ -220,16 +220,16 @@ public class MessageBus implements IOFogModule {
 
                 receivers.forEach((receiverName, messageReceiver) -> {
                     if (messageBusServer.isConsumerClosed(receiverName)) {
-                        logWarning("consumer module for " + receiverName + " stopped. restarting...");
+                        logWarning("Consumer module for " + receiverName + " stopped. restarting...");
                         messageReceiver.close();
                         try {
                             messageBusServer.createConsumer(receiverName);
                             receivers.put(receiverName, new MessageReceiver(
                                 messageReceiver.getReceiver(),
                                 messageBusServer.getConsumer(receiverName)));
-                            logInfo("consumer module restarted");
+                            logInfo("Consumer module restarted");
                         } catch (Exception e) {
-                            logWarning("unable to restart consumer module for " + receiverName + " --> " + e.getMessage());
+                            logWarning("Unable to restart consumer module for " + receiverName + " --> " + e.getMessage());
                         }
                     } else if (!messageReceiver.getReceiver().isLocal() && messageReceiver.getConnectorProducer().isClosed()) {
                         messageReceiver.enableConnectorRealTimeProducing();
@@ -330,9 +330,9 @@ public class MessageBus implements IOFogModule {
             try {
                 messageBusServer.stopServer();
             } catch (Exception exp) {
-                logWarning(exp.getMessage());
+                logError(exp.getMessage(), exp);
             }
-            logWarning("unable to start message bus server --> " + e.getMessage());
+            logError("Unable to start message bus server --> " + e.getMessage(), e);
             StatusReporter.setSupervisorStatus().setModuleStatus(MESSAGE_BUS, STOPPED);
         }
 
@@ -355,7 +355,7 @@ public class MessageBus implements IOFogModule {
         try {
             messageBusServer.stopServer();
         } catch (Exception exp) {
-            logWarning(exp.getMessage());
+            logError(exp.getMessage(), exp);
         }
     }
 

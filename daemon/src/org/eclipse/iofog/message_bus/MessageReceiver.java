@@ -26,7 +26,7 @@ import java.util.ArrayList;
 import java.util.List;
 
 import static org.eclipse.iofog.message_bus.MessageBusServer.messageBusSessionLock;
-import static org.eclipse.iofog.utils.logging.LoggingService.logWarning;
+import static org.eclipse.iofog.utils.logging.LoggingService.logError;
 
 /**
  * receiver {@link Microservice}
@@ -132,7 +132,7 @@ public class MessageReceiver implements AutoCloseable {
 				try {
 					consumer.setMessageHandler(listener);
 				} catch (ActiveMQException e) {
-					logWarning(MODULE_NAME, "Unable to set message bus handler: " + e.getMessage());
+					logError(MODULE_NAME, "Unable to set message bus handler: " + e.getMessage(), e);
 				}
 			}
 		}
@@ -155,7 +155,7 @@ public class MessageReceiver implements AutoCloseable {
 		try {
 			consumer.setMessageHandler(listener);
 		} catch (ActiveMQException e) {
-			logWarning(MODULE_NAME, "Unable to set message bus handler: " + e.getMessage());
+			logError(MODULE_NAME, "Unable to set message bus handler: " + e.getMessage(), e);
 		}
 	}
 	
@@ -170,7 +170,7 @@ public class MessageReceiver implements AutoCloseable {
 			listener = null;
 			consumer.setMessageHandler(null);
 		} catch (Exception exp) {
-			logWarning(MODULE_NAME, exp.getMessage());
+			logError(MODULE_NAME, exp.getMessage(), exp);
 		}
 	}
 	
@@ -182,7 +182,7 @@ public class MessageReceiver implements AutoCloseable {
 		try {
 			consumer.close();
 		} catch (Exception exp) {
-			logWarning(MODULE_NAME, exp.getMessage());
+			logError(MODULE_NAME, exp.getMessage(), exp);
 		}
 	}
 }

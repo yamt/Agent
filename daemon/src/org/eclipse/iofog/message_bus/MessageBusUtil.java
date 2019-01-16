@@ -48,9 +48,10 @@ public class MessageBusUtil {
 			try {
 				publisher.publish(message);
 			} catch (Exception e) {
-				LoggingService.logWarning(
+				LoggingService.logError(
 					"Message Publisher (" + publisher.getRoute().getProducer().getMicroserviceId() + ")",
-					"unable to send message --> " + e.getMessage()
+					"unable to send message --> " + e.getMessage(),
+                    e
 				);
 			}
 		}
@@ -69,7 +70,7 @@ public class MessageBusUtil {
 			try {
 				messages = rec.getMessages();
 			} catch (Exception e) {
-				LoggingService.logWarning("Message Receiver (" + receiver + ")", "unable to receive messages --> " + e.getMessage());
+				LoggingService.logError("Message Receiver (" + receiver + ")", "unable to receive messages --> " + e.getMessage(), e);
 			}
 		}
 		return messages;
