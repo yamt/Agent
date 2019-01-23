@@ -8,11 +8,11 @@ public class ConnectorConfig {
 	private String password;
 	private boolean isDevModeEnabled;
 	private String cert;
-	private boolean selfSignedCerts;
+	private boolean isSelfSignedCert;
 	private String keystorePassword;
 
 	public ConnectorConfig(String name, String host, int port, String user, String password, boolean isDevModeEnabled,
-						   String cert, boolean selfSignedCerts, String keystorePassword) {
+						   String cert, boolean isSelfSignedCert, String keystorePassword) {
 		this.name = name;
 		this.host = host;
 		this.port = port;
@@ -20,7 +20,7 @@ public class ConnectorConfig {
 		this.password = password;
 		this.isDevModeEnabled = isDevModeEnabled;
 		this.cert = cert;
-		this.selfSignedCerts = selfSignedCerts;
+		this.isSelfSignedCert = isSelfSignedCert;
 		this.keystorePassword = keystorePassword;
 	}
 
@@ -48,8 +48,8 @@ public class ConnectorConfig {
 		return cert;
 	}
 
-	public boolean isSelfSignedCerts() {
-		return selfSignedCerts;
+	public boolean isSelfSignedCert() {
+		return isSelfSignedCert;
 	}
 
 	public String getKeystorePassword() {
@@ -69,7 +69,7 @@ public class ConnectorConfig {
 
 		if (port != that.port) return false;
 		if (isDevModeEnabled != that.isDevModeEnabled) return false;
-		if (selfSignedCerts != that.selfSignedCerts) return false;
+		if (isSelfSignedCert != that.isSelfSignedCert) return false;
 		if (!name.equals(that.name)) return false;
 		if (!host.equals(that.host)) return false;
 		if (!user.equals(that.user)) return false;
@@ -87,7 +87,7 @@ public class ConnectorConfig {
 		result = 31 * result + password.hashCode();
 		result = 31 * result + (isDevModeEnabled ? 1 : 0);
 		result = 31 * result + (cert != null ? cert.hashCode() : 0);
-		result = 31 * result + (selfSignedCerts ? 1 : 0);
+		result = 31 * result + (isSelfSignedCert ? 1 : 0);
 		result = 31 * result + (keystorePassword != null ? keystorePassword.hashCode() : 0);
 		return result;
 	}

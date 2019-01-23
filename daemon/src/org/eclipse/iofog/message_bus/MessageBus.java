@@ -209,12 +209,13 @@ public class MessageBus implements IOFogModule {
                                     messageBusServer.getProducer(publisherName)));
                                 logInfo("Producer module restarted");
                             } catch (Exception e) {
-                                logError("Unable to restart producer module for " + publisher + " --> " + e.getMessage(), e);
+                                logError("Unable to restart producer module for " + publisherName + " --> " + e.getMessage(), e);
                             }
                         }
                     } else if (!messagePublisher.getRoute().getProducer().isLocal()
-                        && messagePublisher.getConnectorConsumer().isClosed()) {
-                        messagePublisher.enableConnectorRealTimeReceiving();
+                        && (messagePublisher.getConnectorConsumer() == null
+                        || messagePublisher.getConnectorConsumer().isClosed())) {
+                        messagePublisher.enableConnectorConsuming();
                     }
                 });
 
@@ -231,8 +232,10 @@ public class MessageBus implements IOFogModule {
                         } catch (Exception e) {
                             logWarning("Unable to restart consumer module for " + receiverName + " --> " + e.getMessage());
                         }
-                    } else if (!messageReceiver.getReceiver().isLocal() && messageReceiver.getConnectorProducer().isClosed()) {
-                        messageReceiver.enableConnectorRealTimeProducing();
+                    } else if (!messageReceiver.getReceiver().isLocal()
+                        && (messageReceiver.getConnectorProducer() == null
+                        || messageReceiver.getConnectorProducer().isClosed())) {
+                        messageReceiver.enableConnectorProducing();
                     }
                 });
             } catch (Exception exp) {

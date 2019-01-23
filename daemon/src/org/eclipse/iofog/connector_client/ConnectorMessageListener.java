@@ -10,7 +10,7 @@ public class ConnectorMessageListener implements MessageHandler {
     private static final String MODULE_NAME = "Connector Message Listener";
     private final ConnectorMessageCallback callback;
 
-    public ConnectorMessageListener(ConnectorMessageCallback connectorMessageCallback) {
+    ConnectorMessageListener(ConnectorMessageCallback connectorMessageCallback) {
         this.callback = connectorMessageCallback;
     }
 

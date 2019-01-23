@@ -13,6 +13,7 @@
 package org.eclipse.iofog.supervisor;
 
 import org.eclipse.iofog.IOFogModule;
+import org.eclipse.iofog.connector_client.ConnectorManager;
 import org.eclipse.iofog.field_agent.FieldAgent;
 import org.eclipse.iofog.local_api.LocalApi;
 import org.eclipse.iofog.message_bus.MessageBus;
@@ -93,6 +94,8 @@ public class Supervisor implements IOFogModule {
         localApiThread = new Thread(localApi, "Local Api");
         localApiThread.start();
         scheduler.scheduleAtFixedRate(checkLocalApiStatus, 0, 10, SECONDS);
+
+        startModule(ConnectorManager.INSTANCE);
 
         StatusReporter.setSupervisorStatus().setDaemonStatus(RUNNING);
         logInfo("started");

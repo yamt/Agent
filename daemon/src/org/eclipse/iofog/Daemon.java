@@ -21,12 +21,9 @@ import java.io.*;
 import java.net.HttpURLConnection;
 import java.net.URL;
 import java.text.ParseException;
+
+import static java.nio.charset.StandardCharsets.UTF_8;
 import static org.eclipse.iofog.utils.CmdProperties.getVersion;
-
-
-import static java.nio.charset.StandardCharsets.UTF_8;
-
-import static java.nio.charset.StandardCharsets.UTF_8;
 
 public class Daemon {
     private static final String MODULE_NAME = "MAIN_DAEMON";
@@ -152,7 +149,7 @@ public class Daemon {
     }
 
     public static void main(String[] args) throws ParseException {
-        Sentry.init("https://1638dde4849a4bebb923685b8f0beaf5@sentry.io/1370886");
+        Sentry.init("https://1638dde4849a4bebb923685b8f0beaf5@sentry.io/1");
 
         Sentry.getContext().addExtra("version", getVersion());
 

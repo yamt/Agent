@@ -5,32 +5,41 @@ import org.apache.activemq.artemis.api.core.client.ClientMessage;
 import org.apache.activemq.artemis.api.core.client.ClientProducer;
 import org.apache.activemq.artemis.api.core.client.ClientSession;
 import org.eclipse.iofog.message_bus.Message;
+import org.eclipse.iofog.utils.Constants;
 
 import static org.eclipse.iofog.utils.logging.LoggingService.logWarning;
 
 public class ConnectorProducer {
     public final static String MODULE_NAME = "Connector Producer";
     private ClientProducer producer;
-    private ConnectorClientConfig config;
+    private ClientConfig config;
     private String name;
     private ClientSession session;
 
-    ConnectorProducer(String name, ClientSession session, ConnectorClientConfig connectorProducerConfig) throws ActiveMQException {
+    ConnectorProducer(String name, ClientSession session, ClientConfig connectorProducerConfig) {
         this.name = name;
-        this.session = session;
         this.config = connectorProducerConfig;
-        this.producer = create(session, connectorProducerConfig.getPublisherId());
+        try {
+            init(session);
+        } catch (ActiveMQException e) {
+            logWarning(MODULE_NAME, String.format("Connector producer %s creation error: %s", name, e.getMessage()));
+        }
     }
 
-    private ClientProducer create(ClientSession session, String publisherId) throws ActiveMQException {
-        ClientProducer producer = session.createProducer(String.format("pubsub.iofog.%s", publisherId));
-        if (session.isClosed()) {
-            session.start();
+    void init(ClientSession session) throws ActiveMQException {
+        this.session = session;
+        this.producer = create(session);
+    }
+
+    private ClientProducer create(ClientSession session) throws ActiveMQException {
+        ClientProducer producer = null;
+        if (session != null) {
+            producer = session.createProducer(Constants.ACTIVEMQ_ADDRESS);
         }
         return producer;
     }
 
-    public ConnectorClientConfig getConfig() {
+    public ClientConfig getConfig() {
         return config;
     }
 
@@ -47,7 +56,7 @@ public class ConnectorProducer {
                 logWarning(MODULE_NAME, "Message sending error: " + e.getMessage());
             }
         } else {
-            logWarning(MODULE_NAME, "Producer has not been created");
+            logWarning(MODULE_NAME, String.format("Producer %s has not been created", name));
         }
     }
 
@@ -56,7 +65,7 @@ public class ConnectorProducer {
             try {
                 producer.close();
             } catch (ActiveMQException e) {
-                logWarning(MODULE_NAME, "Unable to close connector producer: " + e.getMessage());
+                logWarning(MODULE_NAME, String.format("Unable to close connector producer %s: %s", name, e.getMessage()));
             }
         }
     }

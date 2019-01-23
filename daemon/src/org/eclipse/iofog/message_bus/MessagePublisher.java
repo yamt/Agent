@@ -17,14 +17,10 @@ import org.apache.activemq.artemis.api.core.client.ClientProducer;
 import org.apache.activemq.artemis.api.core.client.ClientSession;
 import org.eclipse.iofog.connector_client.ConnectorConsumer;
 import org.eclipse.iofog.connector_client.ConnectorManager;
-import org.eclipse.iofog.connector_client.ConnectorMessageCallback;
-import org.eclipse.iofog.connector_client.ConnectorMessageListener;
 import org.eclipse.iofog.microservice.Microservice;
 import org.eclipse.iofog.microservice.Receiver;
 import org.eclipse.iofog.microservice.Route;
 import org.eclipse.iofog.utils.logging.LoggingService;
-
-import java.util.List;
 
 import java.util.List;
 
@@ -50,7 +46,7 @@ public class MessagePublisher implements AutoCloseable {
 		this.route = route;
 		this.producer = producer;
 		this.session = MessageBusServer.getSession();
-		enableConnectorRealTimeReceiving();
+		enableConnectorConsuming();
 	}
 
 	ConnectorConsumer getConnectorConsumer() {
@@ -61,21 +57,17 @@ public class MessagePublisher implements AutoCloseable {
 		return route;
 	}
 
-	synchronized void enableConnectorRealTimeReceiving() {
+	synchronized void enableConnectorConsuming() {
 		if (!route.getProducer().isLocal() && producer != null && !producer.isClosed()) {
 			String name = route.getProducer().getMicroserviceId();
-			connectorConsumer = ConnectorManager.INSTANCE.getConnectorConsumer(
+			connectorConsumer = ConnectorManager.INSTANCE.getConsumer(
 				name,
 				route.getProducer().getConnectorConsumerConfig()
 			);
-			if (connectorConsumer != null && !connectorConsumer.isClosed()) {
-				ConnectorMessageListener listener = new ConnectorMessageListener(new ConnectorMessageCallback());
-				connectorConsumer.setMessageListener(listener);
-			}
 		}
 	}
 
-	private void disableConnectorRealTimeReceiving() {
+	private void disableConnectorConsuming() {
 		if (!route.getProducer().isLocal()) {
 			connectorConsumer.closeConsumer();
 		}
@@ -115,16 +107,16 @@ public class MessagePublisher implements AutoCloseable {
 			if (this.route.getProducer().isLocal() != route.getProducer().isLocal()) {
 				if (!route.getProducer().isLocal()) {
 					this.route = route;
-					enableConnectorRealTimeReceiving();
+					enableConnectorConsuming();
 				} else {
-					disableConnectorRealTimeReceiving();
+					disableConnectorConsuming();
 					this.route = route;
 				}
 			} else if (!this.route.getProducer().isLocal()
 				&& !this.route.getProducer().getConnectorConsumerConfig().equals(route.getProducer().getConnectorConsumerConfig())) {
-				disableConnectorRealTimeReceiving();
+				disableConnectorConsuming();
 				this.route = route;
-				enableConnectorRealTimeReceiving();
+				enableConnectorConsuming();
  			} else {
 				this.route = route;
 			}
@@ -134,7 +126,7 @@ public class MessagePublisher implements AutoCloseable {
 	public synchronized void close() {
 		try {
 			archive.close();
-			disableConnectorRealTimeReceiving();
+			disableConnectorConsuming();
 		} catch (Exception exp) {
 			logError(MODULE_NAME, exp.getMessage(), exp);
 		}

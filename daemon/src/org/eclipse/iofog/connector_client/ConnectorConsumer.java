@@ -3,45 +3,47 @@ package org.eclipse.iofog.connector_client;
 import org.apache.activemq.artemis.api.core.ActiveMQException;
 import org.apache.activemq.artemis.api.core.client.ClientConsumer;
 import org.apache.activemq.artemis.api.core.client.ClientSession;
-import org.apache.activemq.artemis.api.core.client.MessageHandler;
+import org.eclipse.iofog.utils.Constants;
 
 import static org.eclipse.iofog.utils.logging.LoggingService.logWarning;
 
 public class ConnectorConsumer {
     public final static String MODULE_NAME = "Connector Consumer";
     private ClientConsumer consumer;
-    private ConnectorClientConfig config;
+    private ClientConfig config;
     private String name;
-    private ClientSession session;
 
-    ConnectorConsumer(String name, ClientSession session, ConnectorClientConfig config) throws ActiveMQException {
+    ConnectorConsumer(String name, ClientSession session, ClientConfig config) {
         this.name = name;
-        this.session = session;
         this.config = config;
+        try {
+            init(session, config);
+        } catch (ActiveMQException e) {
+            logWarning(MODULE_NAME, String.format("Connector consumer %s creation error: %s", name, e.getMessage()));
+        }
+    }
+
+    void init(ClientSession session, ClientConfig config) throws ActiveMQException {
         this.consumer = create(session, config.getPublisherId(), config.getPassKey());
+        if (consumer != null && !consumer.isClosed()) {
+            ConnectorMessageListener listener = new ConnectorMessageListener(new ConnectorMessageCallback());
+            consumer.setMessageHandler(listener);
+        }
     }
 
     private ClientConsumer create(ClientSession session, String publisherId, String passKey) throws ActiveMQException {
-        ClientConsumer consumer = session.createConsumer(
-            String.format("pubsub.iofog.%s", publisherId),
-            String.format("key='%s'", passKey)
-        );
-        if (session.isClosed()) {
-            session.start();
+        ClientConsumer consumer = null;
+        if (session != null) {
+            consumer = session.createConsumer(
+                String.format("%s::%s", Constants.ACTIVEMQ_ADDRESS, publisherId),
+                String.format("key='%s'", passKey)
+            );
         }
         return consumer;
     }
 
-    public ConnectorClientConfig getConfig() {
+    public synchronized ClientConfig getConfig() {
         return config;
-    }
-
-    public void setMessageListener(MessageHandler handler) {
-        try {
-            consumer.setMessageHandler(handler);
-        } catch (ActiveMQException e) {
-            logWarning(MODULE_NAME, "Unable to set connector message handler: " + e.getMessage());
-        }
     }
 
     public void closeConsumer() {
@@ -49,7 +51,7 @@ public class ConnectorConsumer {
             try {
                 consumer.close();
             } catch (ActiveMQException e) {
-                logWarning(MODULE_NAME, "Unable to close connector consumer: " + e.getMessage());
+                logWarning(MODULE_NAME, String.format("Unable to close connector consumer %s: %s", name, e.getMessage()));
             }
         }
     }

@@ -45,7 +45,7 @@ public class MessageReceiver implements AutoCloseable {
 	MessageReceiver(Receiver receiver, ClientConsumer consumer) {
 		this.receiver = receiver;
 		this.consumer = consumer;
-		enableConnectorRealTimeProducing();
+		enableConnectorProducing();
 	}
 
 	public synchronized Receiver getReceiver() {
@@ -61,16 +61,16 @@ public class MessageReceiver implements AutoCloseable {
 			if (this.receiver.isLocal() != receiver.isLocal()) {
 				if (!receiver.isLocal()) {
 					this.receiver = receiver;
-					enableConnectorRealTimeProducing();
+					enableConnectorProducing();
 				} else {
-					disableConnectorRealTimeProducing();
+					disableConnectorProducing();
 					this.receiver = receiver;
 				}
 			} else if (!this.receiver.isLocal()
 				&& !this.receiver.getConnectorProducerConfig().equals(receiver.getConnectorProducerConfig())) {
-				disableConnectorRealTimeProducing();
+				disableConnectorProducing();
 				this.receiver = receiver;
-				enableConnectorRealTimeProducing();
+				enableConnectorProducing();
 			} else {
 				this.receiver = receiver;
 			}
@@ -118,9 +118,9 @@ public class MessageReceiver implements AutoCloseable {
 		return result;
 	}
 
-	synchronized void enableConnectorRealTimeProducing() {
+	synchronized void enableConnectorProducing() {
 		if (!receiver.isLocal() && consumer != null && !consumer.isClosed()) {
-			connectorProducer = ConnectorManager.INSTANCE.getConnectorProducer(
+			connectorProducer = ConnectorManager.INSTANCE.getProducer(
 				receiver.getMicroserviceUuid(),
 				receiver.getConnectorProducerConfig()
 			);
@@ -138,7 +138,7 @@ public class MessageReceiver implements AutoCloseable {
 		}
 	}
 
-	private void disableConnectorRealTimeProducing() {
+	private void disableConnectorProducing() {
 		if (!receiver.isLocal() && connectorProducer != null) {
 			connectorProducer.closeProducer();
 		}
@@ -178,7 +178,7 @@ public class MessageReceiver implements AutoCloseable {
 		if (consumer == null)
 			return;
 		disableRealTimeReceiving();
-		disableConnectorRealTimeProducing();
+		disableConnectorProducing();
 		try {
 			consumer.close();
 		} catch (Exception exp) {

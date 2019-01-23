@@ -1,25 +1,25 @@
 package org.eclipse.iofog.connector_client;
 
-public class ConnectorClientConfig {
+public class ClientConfig {
     private int connectorId;
     private String publisherId;
     private String passKey;
 
-    public ConnectorClientConfig(int connectorId, String publisherId, String passKey) {
+    public ClientConfig(int connectorId, String publisherId, String passKey) {
         this.connectorId = connectorId;
         this.publisherId = publisherId;
         this.passKey = passKey;
     }
 
-    public int getConnectorId() {
+    int getConnectorId() {
         return connectorId;
     }
 
-    public String getPublisherId() {
+    String getPublisherId() {
         return publisherId;
     }
 
-    public String getPassKey() {
+    String getPassKey() {
         return passKey;
     }
 
@@ -28,7 +28,7 @@ public class ConnectorClientConfig {
         if (this == o) return true;
         if (o == null || getClass() != o.getClass()) return false;
 
-        ConnectorClientConfig that = (ConnectorClientConfig) o;
+        ClientConfig that = (ClientConfig) o;
 
         if (connectorId != that.connectorId) return false;
         if (!publisherId.equals(that.publisherId)) return false;

@@ -458,7 +458,7 @@ public class FieldAgent implements IOFogModule {
                .map(routeJson -> {
                    String producerMicroserviceUuid = routeJson.getString("microserviceUuid");
                    boolean isLocalPublisher = routeJson.getBoolean("isLocal");
-                   ConnectorClientConfig connectorConsumerConfig = null;
+                   ClientConfig connectorConsumerConfig = null;
                    if (!isLocalPublisher) {
                        connectorConsumerConfig = parseConnectorClientConfigJson(routeJson);
                    }
@@ -469,12 +469,12 @@ public class FieldAgent implements IOFogModule {
                .collect(toMap(route -> route.getProducer().getMicroserviceId(), Function.identity()));
     }
 
-    private ConnectorClientConfig parseConnectorClientConfigJson(JsonObject jsonObject) {
+    private ClientConfig parseConnectorClientConfigJson(JsonObject jsonObject) {
         JsonObject configJson = jsonObject.getJsonObject("config");
         int connectorId = configJson.getInt("connectorId");
         String publisherId = configJson.getString("publisherId");
         String passKey = configJson.getString("passKey");
-        return new ConnectorClientConfig(connectorId, publisherId, passKey);
+        return new ClientConfig(connectorId, publisherId, passKey);
     }
 
     private Map<Integer, ConnectorConfig> parseConnectorsJson(JsonArray connectorsJson) {
@@ -488,11 +488,15 @@ public class FieldAgent implements IOFogModule {
                 String user = connectorJson.getString("user");
                 String userPassword = connectorJson.getString("userPassword");
                 boolean isDevModeEnabled = connectorJson.getBoolean("devMode");
-                String cert = connectorJson.getString("cert");
-                boolean selfSignedCerts = connectorJson.getBoolean("selfSignedCerts");
-                String keystorePassword = connectorJson.getString("keystorePassword");
+                String cert = connectorJson.isNull("cert")
+                    ? null
+                    : connectorJson.getString("cert");
+                boolean isSelfSignedCert = connectorJson.getBoolean("isSelfSignedCert");
+                String keystorePassword = connectorJson.isNull("keystorePassword")
+                    ? null
+                    : connectorJson.getString("keystorePassword");
                 return new ConnectorConfig(name, host, port, user, userPassword,
-                    isDevModeEnabled, cert, selfSignedCerts, keystorePassword);
+                    isDevModeEnabled, cert, isSelfSignedCert, keystorePassword);
             }));
     }
 
@@ -504,7 +508,7 @@ public class FieldAgent implements IOFogModule {
                 .map(receiverJson -> {
                     String receiver = receiverJson.getString("microserviceUuid");
                     boolean isLocalReceiver = receiverJson.getBoolean("isLocal");
-                    ConnectorClientConfig connectorProducerConfig = null;
+                    ClientConfig connectorProducerConfig = null;
                     if (!isLocalReceiver) {
                         connectorProducerConfig = parseConnectorClientConfigJson(receiverJson);
                     }
@@ -536,7 +540,7 @@ public class FieldAgent implements IOFogModule {
             Map<String, Route> routesMap = parseRoutesJson(routesJson);
             microserviceManager.setRoutes(routesMap);
         } catch (CertificateException | SSLHandshakeException e) {
-            verificationFailed();
+            verificationFailed(e);
         } catch (Exception e) {
             logWarning("Unable to get routes: " + e.getMessage());
         }
@@ -565,9 +569,9 @@ public class FieldAgent implements IOFogModule {
             Map<Integer, ConnectorConfig> connectorsMap = parseConnectorsJson(connectorsJson);
             connectorManager.setConnectors(connectorsMap);
         } catch (CertificateException | SSLHandshakeException e) {
-            verificationFailed();
+            verificationFailed(e);
         } catch (Exception e) {
-            logWarning("Unable to get routes: " + e.getMessage());
+            logWarning("Unable to get connectors: " + e.getMessage());
         }
     }
 
