@@ -3,12 +3,8 @@ package org.eclipse.iofog.connector_client;
 import org.apache.activemq.artemis.api.core.ActiveMQException;
 import org.apache.activemq.artemis.api.core.client.ClientSession;
 import org.apache.activemq.artemis.api.core.client.ClientSessionFactory;
-import org.eclipse.iofog.command_line.util.CommandShellExecutor;
-import org.eclipse.iofog.command_line.util.CommandShellResultSet;
 import org.eclipse.iofog.utils.Constants;
 
-import java.io.FileNotFoundException;
-import java.io.PrintWriter;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -77,33 +73,18 @@ public class Client {
     }
 
     private ClientSessionFactory getSessionFactory(ConnectorConfig config) throws Exception {
-        return config.isDevModeEnabled()
-            ? ClientSessions.createSessionFactory(config.getHost(), config.getPort())
-            : ClientSessions.createSessionFactory(
+        ClientSessionFactory clientSessionFactory;
+        if (config.isDevModeEnabled()) {
+            clientSessionFactory = ClientSessions.createSessionFactory(config.getHost(), config.getPort());
+        } else {
+            String truststoreFileName = String.format("%s%s.jks", Constants.TRUSTSTORE_DIR, config.getName());
+            ConnectorTruststore.createIfRequired(config.getCert(), truststoreFileName, config.getKeystorePassword());
+            clientSessionFactory = ClientSessions.createSessionFactory(
                 config.getHost(),
                 config.getPort(),
-                String.format("%s%s_truststore.jks", Constants.TRUSTSTORE_DIR, config.getName()),
-                config.getKeystorePassword()
-        );
-    }
-
-    private void createConnectorTruststore(String name, String cert, String truststorePassword) {
-        String trustoreFileName = String.format("%s%s_truststore.jks", Constants.TRUSTSTORE_DIR, name);
-        String certFileName = name + ".crt";
-        try {
-            try(PrintWriter writer = new PrintWriter(certFileName)) {
-                writer.println(cert);
-                CommandShellResultSet<List<String>, List<String>> resultSet = CommandShellExecutor.executeCommand(
-                    String.format(
-                        "keytool -import -noprompt -keystore %s -file %s -storepass %s",
-                        trustoreFileName,
-                        certFileName,
-                        truststorePassword
-                    )
-                );
-            }
-        } catch (FileNotFoundException e) {
-            e.printStackTrace();
+                truststoreFileName,
+                config.getKeystorePassword());
         }
+        return clientSessionFactory;
     }
 }
