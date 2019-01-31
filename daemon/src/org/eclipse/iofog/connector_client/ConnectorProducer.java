@@ -49,14 +49,12 @@ public class ConnectorProducer {
         msg.putStringProperty("key", config.getPassKey());
         msg.putBytesProperty("message", bytesMsg);
 
-        if (producer != null) {
+        if (!producer.isClosed()) {
             try {
                 producer.send(msg);
             } catch (ActiveMQException e) {
                 logWarning(MODULE_NAME, "Message sending error: " + e.getMessage());
             }
-        } else {
-            logWarning(MODULE_NAME, String.format("Producer %s has not been created", name));
         }
     }
 

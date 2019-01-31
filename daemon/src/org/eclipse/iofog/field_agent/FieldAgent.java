@@ -491,12 +491,11 @@ public class FieldAgent implements IOFogModule {
                 String cert = connectorJson.isNull("cert")
                     ? null
                     : connectorJson.getString("cert");
-                boolean isSelfSignedCert = connectorJson.getBoolean("isSelfSignedCert");
                 String keystorePassword = connectorJson.isNull("keystorePassword")
                     ? null
                     : connectorJson.getString("keystorePassword");
                 return new ConnectorConfig(name, host, port, user, userPassword,
-                    isDevModeEnabled, cert, isSelfSignedCert, keystorePassword);
+                    isDevModeEnabled, cert, keystorePassword);
             }));
     }
 

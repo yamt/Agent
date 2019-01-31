@@ -14,11 +14,14 @@ import java.security.cert.Certificate;
 import java.security.cert.CertificateException;
 import java.security.cert.CertificateFactory;
 
-public class ConnectorTruststore {
+import static org.eclipse.iofog.utils.logging.LoggingService.logInfo;
 
-    public static void createIfRequired(String certContent, String truststoreFileName, String truststorePassword)
+class ConnectorTruststore {
+    public static final String MODULE_NAME = "Connector Truststore";
+
+    static void createIfRequired(String certContent, String truststoreFileName, String truststorePassword)
         throws KeyStoreException, UnrecoverableEntryException, CertificateException, NoSuchAlgorithmException, IOException {
-        boolean needToCreate = false;
+        boolean needToCreate;
 
         if (Files.exists(Paths.get(truststoreFileName))) {
             InputStream inputStream = new ByteArrayInputStream(certContent.getBytes());
@@ -32,8 +35,11 @@ public class ConnectorTruststore {
                 Certificate oldCert = ((KeyStore.TrustedCertificateEntry) ks.getEntry(truststoreFileName, null)).getTrustedCertificate();
                 needToCreate = !cert.equals(oldCert);
             } catch (IOException | CertificateException | NoSuchAlgorithmException e) {
+                logInfo(MODULE_NAME, e.getMessage());
                 needToCreate = true;
             }
+        } else {
+            needToCreate = true;
         }
 
         if (needToCreate) {
@@ -44,21 +50,18 @@ public class ConnectorTruststore {
 
     private static void create(String certContent, String truststoreFileName, String truststorePassword)
         throws KeyStoreException, CertificateException, NoSuchAlgorithmException, IOException {
+        try (InputStream inputStream = new ByteArrayInputStream(certContent.getBytes());
+             FileOutputStream fos = new FileOutputStream(truststoreFileName)) {
+            Certificate cert = getCert(inputStream);
 
-        InputStream inputStream = new ByteArrayInputStream(certContent.getBytes());
-        Certificate cert = getCert(inputStream);
+            KeyStore ks = KeyStore.getInstance(KeyStore.getDefaultType());
+            char[] password = truststorePassword.toCharArray();
 
-        KeyStore ks = KeyStore.getInstance(KeyStore.getDefaultType());
-        char[] password = truststorePassword.toCharArray();
-
-        ks.load(null, password);
-        KeyStore.TrustedCertificateEntry trustedCertificateEntry = new KeyStore.TrustedCertificateEntry(cert);
-        ks.setEntry(truststoreFileName, trustedCertificateEntry, null);
-
-        try (FileOutputStream fos = new FileOutputStream(truststoreFileName)) {
+            ks.load(null, password);
+            KeyStore.TrustedCertificateEntry trustedCertificateEntry = new KeyStore.TrustedCertificateEntry(cert);
+            ks.setEntry(truststoreFileName, trustedCertificateEntry, null);
             ks.store(fos, password);
         }
-
     }
 
     private static Certificate getCert(InputStream is) {
