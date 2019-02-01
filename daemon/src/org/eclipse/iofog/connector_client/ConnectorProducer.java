@@ -39,17 +39,21 @@ public class ConnectorProducer {
         return producer;
     }
 
-    public ClientConfig getConfig() {
+    public synchronized ClientConfig getConfig() {
         return config;
     }
 
-    public void sendMessage(Message message) {
-        ClientMessage msg = session.createMessage(false);
-        byte[] bytesMsg = message.getBytes();
-        msg.putStringProperty("key", config.getPassKey());
-        msg.putBytesProperty("message", bytesMsg);
+    public String getName() {
+        return name;
+    }
 
+    public synchronized void sendMessage(Message message) {
         if (!producer.isClosed()) {
+            ClientMessage msg = session.createMessage(false);
+            byte[] bytesMsg = message.getBytes();
+            msg.putStringProperty("key", config.getPassKey());
+            msg.putBytesProperty("message", bytesMsg);
+
             try {
                 producer.send(msg);
             } catch (ActiveMQException e) {
@@ -58,7 +62,7 @@ public class ConnectorProducer {
         }
     }
 
-    public void closeProducer() {
+    public synchronized void close() {
         if (producer != null && !producer.isClosed()) {
             try {
                 producer.close();

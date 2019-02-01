@@ -140,7 +140,7 @@ public class MessageReceiver implements AutoCloseable {
 
 	private void disableConnectorProducing() {
 		if (!receiver.isLocal() && connectorProducer != null) {
-			connectorProducer.closeProducer();
+			ConnectorManager.INSTANCE.removeProducer(connectorProducer.getName());
 		}
 	}
 	

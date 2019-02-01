@@ -5,8 +5,8 @@ import org.apache.activemq.artemis.api.core.client.ClientSession;
 import org.apache.activemq.artemis.api.core.client.ClientSessionFactory;
 import org.eclipse.iofog.utils.Constants;
 
-import java.util.ArrayList;
-import java.util.List;
+import java.util.Map;
+import java.util.concurrent.ConcurrentHashMap;
 
 import static org.eclipse.iofog.utils.logging.LoggingService.logWarning;
 
@@ -14,7 +14,7 @@ public class Client {
 
     public static final String MODULE_NAME = "Connector Client";
     private ClientSessionFactory csf;
-    private List<ClientSession> sessions = new ArrayList<>();
+    private Map<String, ClientSession> sessions = new ConcurrentHashMap<>();
     private ConnectorConfig config;
 
     Client(ConnectorConfig config) {
@@ -34,7 +34,7 @@ public class Client {
         return csf;
     }
 
-    synchronized ClientSession startSession()
+    synchronized ClientSession startSession(String name)
         throws ActiveMQException {
         boolean created = false;
         ClientSession session = null;
@@ -43,7 +43,7 @@ public class Client {
                 session = ClientSessions.defaultAuthenticatedSession(csf, config.getUser(), config.getPassword());
                 session.start();
                 created = true;
-                sessions.add(session);
+                sessions.put(name, session);
             }
             return session;
         } finally {
@@ -53,11 +53,18 @@ public class Client {
         }
     }
 
+    synchronized void ejectSession(String name) throws ActiveMQException {
+        if (sessions.containsKey(name)) {
+            sessions.get(name).close();
+            sessions.remove(name);
+        }
+    }
+
     public synchronized void close() throws ActiveMQException {
         if (csf != null && !csf.isClosed()) {
             csf.close();  // closes the sessions too.
         }
-        for (ClientSession session : sessions) {
+        for (ClientSession session : sessions.values()) {
             session.close();
         }
         sessions.clear();

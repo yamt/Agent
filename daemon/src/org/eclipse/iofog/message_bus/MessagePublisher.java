@@ -68,8 +68,8 @@ public class MessagePublisher implements AutoCloseable {
 	}
 
 	private void disableConnectorConsuming() {
-		if (!route.getProducer().isLocal()) {
-			connectorConsumer.closeConsumer();
+		if (!route.getProducer().isLocal() && connectorConsumer != null) {
+			ConnectorManager.INSTANCE.removeConsumer(connectorConsumer.getName());
 		}
 	}
 

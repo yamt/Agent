@@ -46,7 +46,11 @@ public class ConnectorConsumer {
         return config;
     }
 
-    public void closeConsumer() {
+    public String getName() {
+        return name;
+    }
+
+    public void close() {
         if (consumer != null && !consumer.isClosed()) {
             try {
                 consumer.close();
