@@ -312,6 +312,7 @@ public class FieldAgent implements IOFogModule {
 
                         Tracker.getInstance().handleEvent(TrackingEventType.MICROSERVICE,
                             loadMicroservicesJsonFile());
+                                TrackingInfoUtils.getMicroservicesInfo(loadMicroservicesJsonFile()));
                     }
                     if (changes.getBoolean("routing") || initialization) {
                         loadRoutes(false);
