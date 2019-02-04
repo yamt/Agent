@@ -33,6 +33,7 @@ import org.eclipse.iofog.proxy.SshProxyManager;
 import org.eclipse.iofog.status_reporter.StatusReporter;
 import org.eclipse.iofog.tracking.Tracker;
 import org.eclipse.iofog.tracking.TrackingEventType;
+import org.eclipse.iofog.tracking.TrackingInfoUtils;
 import org.eclipse.iofog.utils.Orchestrator;
 import org.eclipse.iofog.utils.configuration.Configuration;
 import org.eclipse.iofog.utils.logging.LoggingService;
@@ -312,7 +313,7 @@ public class FieldAgent implements IOFogModule {
 
                         Tracker.getInstance().handleEvent(TrackingEventType.MICROSERVICE,
                             loadMicroservicesJsonFile());
-                                TrackingInfoUtils.getMicroservicesInfo(loadMicroservicesJsonFile()));
+                                TrackingInfoUtils.getMicroservicesInfo(loadMicroservicesJsonFile());
                     }
                     if (changes.getBoolean("routing") || initialization) {
                         loadRoutes(false);
