@@ -16,7 +16,9 @@ import org.apache.commons.lang.SystemUtils;
 import org.eclipse.iofog.IOFogModule;
 import org.eclipse.iofog.command_line.util.CommandShellExecutor;
 import org.eclipse.iofog.command_line.util.CommandShellResultSet;
-import org.eclipse.iofog.connector_client.*;
+import org.eclipse.iofog.connector_client.ClientConfig;
+import org.eclipse.iofog.connector_client.ConnectorConfig;
+import org.eclipse.iofog.connector_client.ConnectorManager;
 import org.eclipse.iofog.diagnostics.ImageDownloadManager;
 import org.eclipse.iofog.diagnostics.strace.MicroserviceStraceData;
 import org.eclipse.iofog.diagnostics.strace.StraceDiagnosticManager;
@@ -31,8 +33,6 @@ import org.eclipse.iofog.proxy.SshProxyManager;
 import org.eclipse.iofog.status_reporter.StatusReporter;
 import org.eclipse.iofog.tracking.Tracker;
 import org.eclipse.iofog.tracking.TrackingEventType;
-import org.eclipse.iofog.tracking.TrackingInfoUtils;
-import org.eclipse.iofog.utils.Constants;
 import org.eclipse.iofog.utils.Orchestrator;
 import org.eclipse.iofog.utils.configuration.Configuration;
 import org.eclipse.iofog.utils.logging.LoggingService;
@@ -302,7 +302,6 @@ public class FieldAgent implements IOFogModule {
                     }
                     if (changes.getBoolean("microserviceConfig") || changes.getBoolean("microserviceList") || initialization) {
                         boolean microserviceConfig = changes.getBoolean("microserviceConfig");
-                        boolean routing = changes.getBoolean("routing");
 
                         List<Microservice> microservices = loadMicroservices(false);
 
