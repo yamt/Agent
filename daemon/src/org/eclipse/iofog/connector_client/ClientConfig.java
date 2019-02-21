@@ -11,11 +11,11 @@ public class ClientConfig {
         this.passKey = passKey;
     }
 
-    int getConnectorId() {
+    public int getConnectorId() {
         return connectorId;
     }
 
-    String getPublisherId() {
+    public String getPublisherId() {
         return publisherId;
     }
 

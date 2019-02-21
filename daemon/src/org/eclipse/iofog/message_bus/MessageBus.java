@@ -22,12 +22,14 @@ import org.eclipse.iofog.status_reporter.StatusReporter;
 import org.eclipse.iofog.utils.configuration.Configuration;
 import org.eclipse.iofog.utils.logging.LoggingService;
 
+import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.function.Function;
+import java.util.stream.Stream;
 
-import static java.util.stream.Collectors.toMap;
+import static java.util.stream.Collectors.*;
 import static org.eclipse.iofog.utils.Constants.MESSAGE_BUS;
 import static org.eclipse.iofog.utils.Constants.ModulesStatus.STOPPED;
 
@@ -83,9 +85,9 @@ public class MessageBus implements IOFogModule {
      */
     public synchronized void enableRealTimeReceiving(String receiver) {
         MessageReceiver rec = receivers.get(receiver);
-        if (rec == null)
+        if (rec == null || !rec.isLocal())
             return;
-        rec.enableRealTimeReceiving();
+        ((LocalMessageReceiver) rec).enableRealTimeReceiving();
     }
 
     /**
@@ -95,9 +97,9 @@ public class MessageBus implements IOFogModule {
      */
     public synchronized void disableRealTimeReceiving(String receiver) {
         MessageReceiver rec = receivers.get(receiver);
-        if (rec == null)
+        if (rec == null || !rec.isLocal())
             return;
-        rec.disableRealTimeReceiving();
+        ((LocalMessageReceiver) rec).disableRealTimeReceiving();
     }
 
     /**
@@ -133,19 +135,53 @@ public class MessageBus implements IOFogModule {
 
                 receivers.putAll(entry.getValue().getReceivers()
                     .stream()
-                    .filter(item -> !receivers.containsKey(item.getMicroserviceUuid()))
-                    .collect(toMap(Receiver::getMicroserviceUuid, item -> {
+                    .filter(Receiver::isLocal)
+                    .filter(receiver -> !receivers.containsKey(receiver.getMicroserviceUuid()))
+                    .collect(toMap(Receiver::getMicroserviceUuid, receiver -> {
                         try {
-                            messageBusServer.createConsumer(item.getMicroserviceUuid());
+                            messageBusServer.createConsumer(receiver.getMicroserviceUuid());
                         } catch (Exception e) {
-                            LoggingService.logError(MODULE_NAME + "(" + item + ")",
+                            LoggingService.logError(MODULE_NAME + "(" + receiver + ")",
                                 "unable to start receiver module --> " + e.getMessage(), e);
                         }
-                        return new MessageReceiver(
-                            item,
-                            messageBusServer.getConsumer(item.getMicroserviceUuid())
+                        return new LocalMessageReceiver(
+                            receiver,
+                            messageBusServer.getConsumer(receiver.getMicroserviceUuid())
                         );
                     })));
+
+                Map<Integer, List<Receiver>> remoteReceiverMap = entry.getValue().getReceivers().stream()
+                    .filter(receiver -> !receiver.isLocal())
+                    .collect(groupingBy(receiver -> receiver.getConnectorProducerConfig().getConnectorId()));
+
+                // list of remote receivers for which message bus consumers should be created
+                List<Receiver> filteredRemoteReceivers = remoteReceiverMap.values().stream()
+                    .map(Collections::min)
+                    .collect(toList());
+
+                Map<Integer, MessageReceiver> remoteMessageReceiverMap = filteredRemoteReceivers.stream()
+                    .map(remoteReceiver -> {
+                        try {
+                            messageBusServer.createConsumer(remoteReceiver.getMicroserviceUuid());
+                        } catch (Exception e) {
+                            LoggingService.logError(MODULE_NAME + "(" + remoteReceiver + ")",
+                                "unable to start receiver module --> " + e.getMessage(), e);
+                        }
+                        return new RemoteMessageReceiver(
+                            remoteReceiver.getConnectorProducerConfig(),
+                            messageBusServer.getConsumer(remoteReceiver.getMicroserviceUuid())
+                        );
+                    })
+                    .collect(toMap(remoteMessageReceiver -> remoteMessageReceiver.getConnectorProducerConfig().getConnectorId(),
+                        remoteMessageReceiver -> remoteMessageReceiver));
+
+                receivers.putAll(entry.getValue().getReceivers()
+                    .stream()
+                    .filter(receiver -> !receiver.isLocal())
+                    .collect(toMap(
+                        Receiver::getMicroserviceUuid,
+                        receiver -> remoteMessageReceiverMap.get(receiver.getConnectorProducerConfig().getConnectorId())
+                    )));
             });
 
     }
@@ -238,6 +274,38 @@ public class MessageBus implements IOFogModule {
                         messageReceiver.enableConnectorProducing();
                     }
                 });
+
+                receivers.entrySet().stream()
+                    .filter(entry -> entry.getValue().isLocal())
+                    .forEach(entry -> {
+                        if (messageBusServer.isConsumerClosed(entry.getKey())) {
+                            logWarning("Consumer module for " + entry.getKey() + " stopped. restarting...");
+                            entry.getValue().close();
+                            try {
+                                messageBusServer.createConsumer(entry.getKey());
+                                receivers.put(entry.getKey(), new LocalMessageReceiver(
+                                    ((LocalMessageReceiver) entry.getValue()).getReceiver(),
+                                    messageBusServer.getConsumer(entry.getKey())));
+                                logInfo("Consumer module restarted");
+                            } catch (Exception e) {
+                                logWarning("Unable to restart consumer module for " + entry.getKey() + " --> " + e.getMessage());
+                            }
+                        }
+                    });
+
+                receivers.entrySet().stream()
+                    .filter(entry -> !entry.getValue().isLocal())
+                    .forEach(entry -> {
+                        if (messageBusServer.isConsumerClosed(entry.getKey())) {
+                            logWarning("Consumer module for " + entry.getKey() + " stopped. restarting...");
+                            entry.getValue().close();
+
+                            RemoteMessageReceiver remoteMessageReceiver = (RemoteMessageReceiver) entry.getValue();
+                            int connectorId = remoteMessageReceiver.getConnectorProducerConfig().getConnectorId();
+
+                        }
+                    });
+
             } catch (Exception exp) {
                 logWarning(exp.getMessage());
             }
@@ -276,16 +344,20 @@ public class MessageBus implements IOFogModule {
                             messageBusServer.getProducer(route.getProducer().getMicroserviceId())
                         ))));
 
+
+
+
+
             receivers.forEach((receiverName, messageReceiver) -> {
                 if (!newReceivers.containsKey(receiverName)) {
                     messageReceiver.close();
                     messageBusServer.removeConsumer(receiverName);
                 } else {
-                    messageReceiver.updateReceiver(newReceivers.get(receiverName));
+                    messageReceiver.update(newReceivers.get(receiverName));
                 }
             });
             receivers.entrySet().removeIf(entry -> !newReceivers.containsKey(entry.getKey()));
-            connectorManager.getConnectorProducers().entrySet().removeIf(entry -> !newReceivers.containsKey(entry.getKey()));
+//            connectorManager.getConnectorProducers().entrySet().removeIf(entry -> !newReceivers.containsKey(entry.getKey()));
 
             receivers.putAll(
                 newReceivers.values().stream()

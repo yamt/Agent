@@ -2,7 +2,7 @@ package org.eclipse.iofog.microservice;
 
 import org.eclipse.iofog.connector_client.ClientConfig;
 
-public class Receiver {
+public class Receiver implements Comparable<Receiver> {
 	private String microserviceUuid;
 	private boolean isLocal;
 	private ClientConfig connectorProducerConfig;
@@ -35,6 +35,11 @@ public class Receiver {
 
 	public void setConnectorProducerConfig(ClientConfig connectorProducerConfig) {
 		this.connectorProducerConfig = connectorProducerConfig;
+	}
+
+	@Override
+	public int compareTo(Receiver o) {
+		return microserviceUuid.compareTo(o.getMicroserviceUuid());
 	}
 
 	@Override

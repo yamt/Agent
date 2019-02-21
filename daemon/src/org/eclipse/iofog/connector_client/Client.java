@@ -34,7 +34,7 @@ public class Client {
         return csf;
     }
 
-    synchronized ClientSession startSession(String name)
+    synchronized ClientSession startSession(String microserviceUuid)
         throws ActiveMQException {
         boolean created = false;
         ClientSession session = null;
@@ -43,7 +43,7 @@ public class Client {
                 session = ClientSessions.defaultAuthenticatedSession(csf, config.getUser(), config.getPassword());
                 session.start();
                 created = true;
-                sessions.put(name, session);
+                sessions.put(microserviceUuid, session);
             }
             return session;
         } finally {

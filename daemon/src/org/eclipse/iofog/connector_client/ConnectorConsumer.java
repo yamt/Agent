@@ -13,13 +13,13 @@ public class ConnectorConsumer {
     private ClientConfig config;
     private String name;
 
-    ConnectorConsumer(String name, ClientSession session, ClientConfig config) {
-        this.name = name;
+    ConnectorConsumer(String producerName, ClientSession session, ClientConfig config) {
+        this.name = producerName;
         this.config = config;
         try {
             init(session, config);
         } catch (ActiveMQException e) {
-            logWarning(MODULE_NAME, String.format("Connector consumer %s creation error: %s", name, e.getMessage()));
+            logWarning(MODULE_NAME, String.format("Connector consumer %s creation error: %s", producerName, e.getMessage()));
         }
     }
 

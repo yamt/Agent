@@ -12,177 +12,72 @@
  *******************************************************************************/
 package org.eclipse.iofog.message_bus;
 
-import org.apache.activemq.artemis.api.core.ActiveMQException;
 import org.apache.activemq.artemis.api.core.client.ClientConsumer;
 import org.apache.activemq.artemis.api.core.client.ClientMessage;
-import org.eclipse.iofog.connector_client.ConnectorManager;
-import org.eclipse.iofog.connector_client.ConnectorProducer;
-import org.eclipse.iofog.local_api.MessageCallback;
-import org.eclipse.iofog.local_api.RemoteMessageCallback;
 import org.eclipse.iofog.microservice.Microservice;
-import org.eclipse.iofog.microservice.Receiver;
 
 import java.util.ArrayList;
 import java.util.List;
 
 import static org.eclipse.iofog.message_bus.MessageBusServer.messageBusSessionLock;
-import static org.eclipse.iofog.utils.logging.LoggingService.logError;
 
 /**
  * receiver {@link Microservice}
- * 
- * @author saeid
  *
+ * @author saeid
  */
-public class MessageReceiver implements AutoCloseable {
-	private static final String MODULE_NAME = "Message Receiver";
+public abstract class MessageReceiver implements AutoCloseable {
+    private static final String MODULE_NAME = "Message Receiver";
 
-	private Receiver receiver;
-	private MessageListener listener;
-	private final ClientConsumer consumer;
-	private ConnectorProducer connectorProducer;
+    MessageListener listener;
+    ClientConsumer consumer;
 
-	MessageReceiver(Receiver receiver, ClientConsumer consumer) {
-		this.receiver = receiver;
-		this.consumer = consumer;
-		enableConnectorProducing();
-	}
+    MessageReceiver(ClientConsumer consumer) {
+        this.consumer = consumer;
+    }
 
-	public synchronized Receiver getReceiver() {
-		return receiver;
-	}
+    public abstract boolean isLocal();
 
-	synchronized ConnectorProducer getConnectorProducer() {
-		return connectorProducer;
-	}
+    public abstract void close();
 
-	synchronized void updateReceiver(Receiver receiver) {
-		if (!this.receiver.equals(receiver)) {
-			if (this.receiver.isLocal() != receiver.isLocal()) {
-				if (!receiver.isLocal()) {
-					this.receiver = receiver;
-					enableConnectorProducing();
-				} else {
-					disableConnectorProducing();
-					this.receiver = receiver;
-				}
-			} else if (!this.receiver.isLocal()
-				&& !this.receiver.getConnectorProducerConfig().equals(receiver.getConnectorProducerConfig())) {
-				disableConnectorProducing();
-				this.receiver = receiver;
-				enableConnectorProducing();
-			} else {
-				this.receiver = receiver;
-			}
-		}
-	}
+    /**
+     * receivers list of {@link Message} sent to this {@link Microservice}
+     *
+     * @return list of {@link Message}
+     * @throws Exception exception
+     */
+    synchronized List<Message> getMessages() throws Exception {
+        List<Message> result = new ArrayList<>();
 
-	/**
-	 * receivers list of {@link Message} sent to this {@link Microservice}
-	 * 
-	 * @return list of {@link Message}
-	 * @throws Exception
-	 */
-	synchronized List<Message> getMessages() throws Exception {
-		List<Message> result = new ArrayList<>();
-		
-		if (consumer != null || listener == null) {
-			Message message = getMessage();
-			while (message != null) {
-				result.add(message);
-				message = getMessage();
-			}
-		}
-		return result;
-	}
+        if (consumer != null || listener == null) {
+            Message message = getMessage();
+            while (message != null) {
+                result.add(message);
+                message = getMessage();
+            }
+        }
+        return result;
+    }
 
-	/**
-	 * receives only one {@link Message}
-	 * 
-	 * @return {@link Message}
-	 * @throws Exception
-	 */
-	private Message getMessage() throws Exception {
-		if (consumer == null || listener != null)
-			return null;
+    /**
+     * receives only one {@link Message}
+     *
+     * @return {@link Message}
+     * @throws Exception exception
+     */
+    private Message getMessage() throws Exception {
+        if (consumer == null || listener != null)
+            return null;
 
-		Message result = null;
-		ClientMessage msg;
-		synchronized (messageBusSessionLock) {
-			msg = consumer.receiveImmediate();
-		}
-		if (msg != null) {
-			msg.acknowledge();
-			result = new Message(msg.getBytesProperty("message"));
-		}
-		return result;
-	}
-
-	synchronized void enableConnectorProducing() {
-		if (!receiver.isLocal() && consumer != null && !consumer.isClosed()) {
-			connectorProducer = ConnectorManager.INSTANCE.getProducer(
-				receiver.getMicroserviceUuid(),
-				receiver.getConnectorProducerConfig()
-			);
-			if (connectorProducer != null && !connectorProducer.isClosed()) {
-				listener = new MessageListener(new RemoteMessageCallback(
-					receiver.getMicroserviceUuid(),
-					connectorProducer)
-				);
-				try {
-					consumer.setMessageHandler(listener);
-				} catch (ActiveMQException e) {
-					logError(MODULE_NAME, "Unable to set message bus handler: " + e.getMessage(), e);
-				}
-			}
-		}
-	}
-
-	private void disableConnectorProducing() {
-		if (!receiver.isLocal() && connectorProducer != null) {
-			ConnectorManager.INSTANCE.removeProducer(connectorProducer.getName());
-		}
-	}
-	
-	/**
-	 * enables real-time receiving for this {@link Microservice}
-	 * 
-	 */
-	void enableRealTimeReceiving() {
-		if (consumer == null || consumer.isClosed())
-			return;
-		listener = new MessageListener(new MessageCallback(receiver.getMicroserviceUuid()));
-		try {
-			consumer.setMessageHandler(listener);
-		} catch (ActiveMQException e) {
-			logError(MODULE_NAME, "Unable to set message bus handler: " + e.getMessage(), e);
-		}
-	}
-	
-	/**
-	 * disables real-time receiving for this {@link Microservice}
-	 * 
-	 */
-	void disableRealTimeReceiving() {
-		try {
-			if (consumer == null || listener == null || consumer.getMessageHandler() == null)
-				return;
-			listener = null;
-			consumer.setMessageHandler(null);
-		} catch (Exception exp) {
-			logError(MODULE_NAME, exp.getMessage(), exp);
-		}
-	}
-	
-	public synchronized void close() {
-		if (consumer == null)
-			return;
-		disableRealTimeReceiving();
-		disableConnectorProducing();
-		try {
-			consumer.close();
-		} catch (Exception exp) {
-			logError(MODULE_NAME, exp.getMessage(), exp);
-		}
-	}
+        Message result = null;
+        ClientMessage msg;
+        synchronized (messageBusSessionLock) {
+            msg = consumer.receiveImmediate();
+        }
+        if (msg != null) {
+            msg.acknowledge();
+            result = new Message(msg.getBytesProperty("message"));
+        }
+        return result;
+    }
 }
