@@ -22,13 +22,8 @@ import org.eclipse.iofog.microservice.Receiver;
 import org.eclipse.iofog.microservice.Route;
 import org.eclipse.iofog.utils.logging.LoggingService;
 
-import java.util.Collections;
 import java.util.List;
-import java.util.Map;
-import java.util.stream.Stream;
 
-import static java.util.stream.Collectors.groupingBy;
-import static java.util.stream.Collectors.toList;
 import static org.eclipse.iofog.message_bus.MessageBus.MODULE_NAME;
 import static org.eclipse.iofog.message_bus.MessageBusServer.messageBusSessionLock;
 import static org.eclipse.iofog.utils.logging.LoggingService.logError;
@@ -96,8 +91,7 @@ public class MessagePublisher implements AutoCloseable {
                 e
 			);
 		}
-
-		for (Receiver receiver : getFilteredReceivers()) {
+		for (Receiver receiver : route.getReceivers()) {
 			String name = receiver.getMicroserviceUuid();
 			ClientMessage msg = session.createMessage(false);
 			msg.putObjectProperty("receiver", name);
@@ -106,23 +100,6 @@ public class MessagePublisher implements AutoCloseable {
 				producer.send(msg);
 			}
 		}
-	}
-
-	private List<Receiver> getFilteredReceivers() {
-		List<Receiver> receivers = route.getReceivers();
-		Map<Integer, List<Receiver>> receiverMap = receivers.stream()
-			.filter(receiver -> !receiver.isLocal())
-			.collect(groupingBy(receiver -> receiver.getConnectorProducerConfig().getConnectorId()));
-
-		List<Receiver> remoteReceivers = receiverMap.values().stream()
-			.map(Collections::min)
-			.collect(toList());
-
-		return Stream.concat(
-			receivers.stream()
-				.filter(Receiver::isLocal),
-			remoteReceivers.stream()
-		).collect(toList());
 	}
 
 	synchronized void updateRoute(Route route) {

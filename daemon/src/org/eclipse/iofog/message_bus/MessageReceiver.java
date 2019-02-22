@@ -15,6 +15,7 @@ package org.eclipse.iofog.message_bus;
 import org.apache.activemq.artemis.api.core.client.ClientConsumer;
 import org.apache.activemq.artemis.api.core.client.ClientMessage;
 import org.eclipse.iofog.microservice.Microservice;
+import org.eclipse.iofog.microservice.Receiver;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -27,18 +28,24 @@ import static org.eclipse.iofog.message_bus.MessageBusServer.messageBusSessionLo
  * @author saeid
  */
 public abstract class MessageReceiver implements AutoCloseable {
-    private static final String MODULE_NAME = "Message Receiver";
-
     MessageListener listener;
     ClientConsumer consumer;
+    Receiver receiver;
 
-    MessageReceiver(ClientConsumer consumer) {
+    MessageReceiver(Receiver receiver, ClientConsumer consumer) {
         this.consumer = consumer;
+        this.receiver = receiver;
     }
 
     public abstract boolean isLocal();
 
     public abstract void close();
+
+    public abstract void update(Receiver receiver);
+
+    public synchronized Receiver getReceiver() {
+        return receiver;
+    }
 
     /**
      * receivers list of {@link Message} sent to this {@link Microservice}

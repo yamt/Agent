@@ -10,11 +10,8 @@ import static org.eclipse.iofog.utils.logging.LoggingService.logError;
 public class LocalMessageReceiver extends MessageReceiver {
     private static final String MODULE_NAME = "Local Message Receiver";
 
-    private Receiver receiver;
-
     LocalMessageReceiver(Receiver receiver, ClientConsumer consumer) {
-        super(consumer);
-        this.receiver = receiver;
+        super(receiver, consumer);
     }
 
     @Override
@@ -22,9 +19,6 @@ public class LocalMessageReceiver extends MessageReceiver {
         return true;
     }
 
-    public synchronized Receiver getReceiver() {
-        return receiver;
-    }
     /**
      * enables real-time receiving for this {@link org.eclipse.iofog.microservice.Microservice}
      */
@@ -63,4 +57,7 @@ public class LocalMessageReceiver extends MessageReceiver {
             logError(MODULE_NAME, exp.getMessage(), exp);
         }
     }
+
+    @Override
+    public void update(Receiver receiver) {}
 }

@@ -4,7 +4,6 @@ import org.apache.activemq.artemis.api.core.ActiveMQException;
 import org.apache.activemq.artemis.api.core.client.ClientSession;
 import org.eclipse.iofog.IOFogModule;
 import org.eclipse.iofog.utils.Constants;
-import org.eclipse.iofog.utils.functional.Pair;
 
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
@@ -12,7 +11,7 @@ import java.util.concurrent.ConcurrentHashMap;
 public enum ConnectorManager implements IOFogModule {
     INSTANCE;
 
-    private Map<Pair<Integer, String>, ConnectorProducer> connectorProducers = new ConcurrentHashMap<>();
+    private Map<String, ConnectorProducer> connectorProducers = new ConcurrentHashMap<>();
     private Map<String, ConnectorConsumer> connectorConsumers = new ConcurrentHashMap<>();
     private Map<Integer, Client> clients = new ConcurrentHashMap<>();
 
@@ -20,7 +19,7 @@ public enum ConnectorManager implements IOFogModule {
         return clients;
     }
 
-    public Map<Pair<Integer, String>, ConnectorProducer> getConnectorProducers() {
+    public Map<String, ConnectorProducer> getConnectorProducers() {
         return connectorProducers;
     }
 
@@ -69,32 +68,30 @@ public enum ConnectorManager implements IOFogModule {
         }
     }
 
-    public ConnectorProducer getProducer(ClientConfig connectorProducerConfig) {
+    public ConnectorProducer getProducer(String name, ClientConfig connectorProducerConfig) {
         ConnectorProducer connectorProducer = null;
-        Pair<Integer, String> connectorProducerIdentifiers = Pair.of(
-            connectorProducerConfig.getConnectorId(), connectorProducerConfig.getPublisherId()
-        );
+        int connectorId = connectorProducerConfig.getConnectorId();
 
-        if (connectorProducers.containsKey(connectorProducerIdentifiers)) {
-            connectorProducer = connectorProducers.get(connectorProducerIdentifiers);
-        } else if (clients.containsKey(connectorProducerIdentifiers._1())) {
-            initConnectorClient(connectorProducerIdentifiers._1());
-            connectorProducer = createProducer(connectorProducerConfig);
-            connectorProducers.put(connectorProducerIdentifiers, connectorProducer);
+        if (connectorProducers.containsKey(name)) {
+            connectorProducer = connectorProducers.get(name);
+        } else if (clients.containsKey(connectorId)) {
+            initConnectorClient(connectorId);
+            connectorProducer = createProducer(name, connectorProducerConfig);
+            connectorProducers.put(name, connectorProducer);
         }
         return connectorProducer;
     }
 
-    public ConnectorConsumer getConsumer(String producerName, ClientConfig consumerConfig) {
+    public ConnectorConsumer getConsumer(String name, ClientConfig consumerConfig) {
         ConnectorConsumer connectorConsumer = null;
         int connectorId = consumerConfig.getConnectorId();
 
-        if (connectorConsumers.containsKey(producerName)) {
-            connectorConsumer = connectorConsumers.get(producerName);
+        if (connectorConsumers.containsKey(name)) {
+            connectorConsumer = connectorConsumers.get(name);
         } else if (clients.containsKey(connectorId)) {
             initConnectorClient(connectorId);
-            connectorConsumer = createConsumer(producerName, consumerConfig);
-            connectorConsumers.put(producerName, connectorConsumer);
+            connectorConsumer = createConsumer(name, consumerConfig);
+            connectorConsumers.put(name, connectorConsumer);
         }
         return connectorConsumer;
     }
@@ -142,16 +139,16 @@ public enum ConnectorManager implements IOFogModule {
         }
     }
 
-    private ConnectorProducer createProducer(ClientConfig producerConfig) {
+    private ConnectorProducer createProducer(String name, ClientConfig producerConfig) {
         ClientSession session = null;
         try {
-            session = clients.get(producerConfig.getConnectorId()).startSession(producerConfig.getPublisherId());
+            session = clients.get(producerConfig.getConnectorId()).startSession(name);
         } catch (Exception e) {
             logWarning(String.format(
                 "Connector id %d, session creation error: %s", producerConfig.getConnectorId(), e.getMessage())
             );
         }
-        return new ConnectorProducer(producerConfig.getPublisherId(), session, producerConfig);
+        return new ConnectorProducer(name, session, producerConfig);
     }
 
     private ConnectorConsumer createConsumer(String name, ClientConfig connectorConsumerConfig) {
