@@ -102,7 +102,7 @@ public class Supervisor implements IOFogModule {
         startModule(ConnectorManager.INSTANCE);
 
         StatusReporter.setSupervisorStatus().setDaemonStatus(RUNNING);
-        logInfo("started");
+		logInfo("Started");
         Tracker.getInstance().handleEvent(TrackingEventType.START, TrackingInfoUtils.getStartTrackingInfo());
 
         operationDuration();

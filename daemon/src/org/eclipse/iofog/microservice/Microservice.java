@@ -27,7 +27,7 @@ public class Microservice {
     private List<PortMapping> portMappings;
     private String config;
     private String containerId;
-    private String registry;
+    private int registryId;
     private String containerIpAddress;
     private boolean rebuild;
     private boolean rootHostAccess;
@@ -60,12 +60,12 @@ public class Microservice {
         this.containerIpAddress = containerIpAddress;
     }
 
-    public String getRegistry() {
-        return registry;
+    public int getRegistryId() {
+        return registryId;
     }
 
-    public void setRegistry(String registry) {
-        this.registry = registry;
+    public void setRegistryId(int registryId) {
+        this.registryId = registryId;
     }
 
     public String getContainerId() {
@@ -124,13 +124,13 @@ public class Microservice {
         this.volumeMappings = volumeMappings;
     }
 
-	public synchronized boolean isUpdating() {
-		return isUpdating;
-	}
+    public synchronized boolean isUpdating() {
+        return isUpdating;
+    }
 
-	public synchronized void setUpdating(boolean updating) {
-		isUpdating = updating;
-	}
+    public synchronized void setUpdating(boolean updating) {
+        isUpdating = updating;
+    }
 
     public boolean isDelete() {
         return delete;

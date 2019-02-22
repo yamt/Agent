@@ -184,9 +184,9 @@ public class FieldAgent implements IOFogModule {
                 connected = isControllerConnected(false);
                 if (!connected)
                     continue;
-                logInfo("controller connection verified");
+                logInfo("Controller connection verified");
 
-                logInfo("sending IOFog status...");
+                logInfo("Sending ioFog status...");
                 orchestrator.request("status", RequestType.PUT, null, status);
                 onPostStatusSuccess();
             } catch (CertificateException | SSLHandshakeException e) {
@@ -247,7 +247,7 @@ public class FieldAgent implements IOFogModule {
         connected = false;
         if (!notProvisioned()) {
             StatusReporter.setFieldAgentStatus().setControllerStatus(ControllerStatus.BROKEN_CERTIFICATE);
-            logError("controller certificate verification failed", e);
+            logWarning("controller certificate verification failed");
         }
         StatusReporter.setFieldAgentStatus().setControllerVerified(false);
     }
@@ -343,7 +343,7 @@ public class FieldAgent implements IOFogModule {
         try {
             orchestrator.request("delete-node", RequestType.DELETE, null, null);
         } catch (Exception e) {
-            logInfo("can't send delete node command");
+            logInfo("Can't send delete node command");
         }
         deProvision(false);
     }
@@ -437,6 +437,7 @@ public class FieldAgent implements IOFogModule {
             for (int i = 0; i < registriesList.size(); i++) {
                 JsonObject registry = registriesList.getJsonObject(i);
                 Registry.RegistryBuilder registryBuilder = new Registry.RegistryBuilder()
+                        .setId(registry.getInt("id"))
                         .setUrl(registry.getString("url"))
                         .setIsPublic(registry.getBoolean("isPublic", false));
                 if (!registry.getBoolean("isPublic", false)) {
@@ -602,7 +603,7 @@ public class FieldAgent implements IOFogModule {
      * @param fromFile - load from file
      */
     private List<Microservice> loadMicroservices(boolean fromFile) {
-        logInfo("loading microservices...");
+        logInfo("Loading microservices...");
         if (notProvisioned() || !isControllerConnected(fromFile)) {
             return new ArrayList<>();
         }
@@ -649,7 +650,7 @@ public class FieldAgent implements IOFogModule {
             microservice.setConfig(jsonObj.getString("config"));
             microservice.setRebuild(jsonObj.getBoolean("rebuild"));
             microservice.setRootHostAccess(jsonObj.getBoolean("rootHostAccess"));
-            microservice.setRegistry(jsonObj.getString("registryUrl"));
+            microservice.setRegistryId(jsonObj.getInt("registryId"));
             microservice.setLogSize(jsonObj.getJsonNumber("logSize").longValue());
             microservice.setDelete(jsonObj.getBoolean("delete"));
             microservice.setDeleteWithCleanup(jsonObj.getBoolean("deleteWithCleanup"));
@@ -813,7 +814,7 @@ public class FieldAgent implements IOFogModule {
      * gets IOFog instance configuration from IOFog controller
      */
     private void getFogConfig() {
-        logInfo("get fog config");
+        logInfo("Get ioFog config");
         if (notProvisioned() || !isControllerConnected(false)) {
             return;
         }
