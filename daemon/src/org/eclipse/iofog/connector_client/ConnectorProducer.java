@@ -7,7 +7,6 @@ import org.apache.activemq.artemis.api.core.client.ClientSession;
 import org.eclipse.iofog.message_bus.Message;
 import org.eclipse.iofog.utils.Constants;
 
-import static org.eclipse.iofog.utils.logging.LoggingService.logInfo;
 import static org.eclipse.iofog.utils.logging.LoggingService.logWarning;
 
 public class ConnectorProducer {
@@ -57,7 +56,6 @@ public class ConnectorProducer {
 
             try {
                 producer.send(msg);
-                logInfo(MODULE_NAME, "Sent message to connector");
             } catch (ActiveMQException e) {
                 logWarning(MODULE_NAME, "Message sending error: " + e.getMessage());
             }

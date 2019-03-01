@@ -65,7 +65,7 @@ public class MessageBusUtil {
 	 */
 	public List<Message> getMessages(String receiver) {
 		List<Message> messages = new ArrayList<>();
-		MessageReceiver rec = messageBus.getReceiver(receiver); 
+		LocalMessageReceiver rec = messageBus.getReceiver(receiver);
 		if (rec != null) {
 			try {
 				messages = rec.getMessages();

@@ -2,9 +2,14 @@ package org.eclipse.iofog.message_bus;
 
 import org.apache.activemq.artemis.api.core.ActiveMQException;
 import org.apache.activemq.artemis.api.core.client.ClientConsumer;
+import org.apache.activemq.artemis.api.core.client.ClientMessage;
 import org.eclipse.iofog.local_api.MessageCallback;
 import org.eclipse.iofog.microservice.Receiver;
 
+import java.util.ArrayList;
+import java.util.List;
+
+import static org.eclipse.iofog.message_bus.MessageBusServer.messageBusSessionLock;
 import static org.eclipse.iofog.utils.logging.LoggingService.logError;
 
 public class LocalMessageReceiver extends MessageReceiver {
@@ -60,4 +65,45 @@ public class LocalMessageReceiver extends MessageReceiver {
 
     @Override
     public void update(Receiver receiver) {}
+
+    /**
+     * receivers list of {@link Message} sent to this {@link org.eclipse.iofog.microservice.Microservice}
+     *
+     * @return list of {@link Message}
+     * @throws Exception exception
+     */
+    synchronized List<Message> getMessages() throws Exception {
+        List<Message> result = new ArrayList<>();
+
+        if (consumer != null || listener == null) {
+            Message message = getMessage();
+            while (message != null) {
+                result.add(message);
+                message = getMessage();
+            }
+        }
+        return result;
+    }
+
+    /**
+     * receives only one {@link Message}
+     *
+     * @return {@link Message}
+     * @throws Exception exception
+     */
+    private Message getMessage() throws Exception {
+        if (consumer == null || listener != null)
+            return null;
+
+        Message result = null;
+        ClientMessage msg;
+        synchronized (messageBusSessionLock) {
+            msg = consumer.receiveImmediate();
+        }
+        if (msg != null) {
+            msg.acknowledge();
+            result = new Message(msg.getBytesProperty("message"));
+        }
+        return result;
+    }
 }

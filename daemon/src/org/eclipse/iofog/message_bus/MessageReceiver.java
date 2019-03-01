@@ -13,14 +13,8 @@
 package org.eclipse.iofog.message_bus;
 
 import org.apache.activemq.artemis.api.core.client.ClientConsumer;
-import org.apache.activemq.artemis.api.core.client.ClientMessage;
 import org.eclipse.iofog.microservice.Microservice;
 import org.eclipse.iofog.microservice.Receiver;
-
-import java.util.ArrayList;
-import java.util.List;
-
-import static org.eclipse.iofog.message_bus.MessageBusServer.messageBusSessionLock;
 
 /**
  * receiver {@link Microservice}
@@ -47,44 +41,5 @@ public abstract class MessageReceiver implements AutoCloseable {
         return receiver;
     }
 
-    /**
-     * receivers list of {@link Message} sent to this {@link Microservice}
-     *
-     * @return list of {@link Message}
-     * @throws Exception exception
-     */
-    synchronized List<Message> getMessages() throws Exception {
-        List<Message> result = new ArrayList<>();
 
-        if (consumer != null || listener == null) {
-            Message message = getMessage();
-            while (message != null) {
-                result.add(message);
-                message = getMessage();
-            }
-        }
-        return result;
-    }
-
-    /**
-     * receives only one {@link Message}
-     *
-     * @return {@link Message}
-     * @throws Exception exception
-     */
-    private Message getMessage() throws Exception {
-        if (consumer == null || listener != null)
-            return null;
-
-        Message result = null;
-        ClientMessage msg;
-        synchronized (messageBusSessionLock) {
-            msg = consumer.receiveImmediate();
-        }
-        if (msg != null) {
-            msg.acknowledge();
-            result = new Message(msg.getBytesProperty("message"));
-        }
-        return result;
-    }
 }

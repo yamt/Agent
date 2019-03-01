@@ -26,7 +26,6 @@ import static io.netty.handler.codec.http.HttpMethod.POST;
 import static io.netty.handler.codec.http.HttpResponseStatus.OK;
 import static io.netty.handler.codec.http.HttpVersion.HTTP_1_1;
 import static java.nio.charset.StandardCharsets.UTF_8;
-import static org.eclipse.iofog.utils.logging.LoggingService.logInfo;
 
 /**
  * Handler to publish the messages from the container to message bus
@@ -91,7 +90,6 @@ public class MessageSenderHandler implements Callable<FullHttpResponse> {
 			return new DefaultFullHttpResponse(HTTP_1_1, HttpResponseStatus.BAD_REQUEST, outputBuffer);
 		}
 		bus.publishMessage(message);
-		logInfo(MODULE_NAME, "Received message from container");
 
 		JsonBuilderFactory factory = Json.createBuilderFactory(null);
 		JsonObjectBuilder builder = factory.createObjectBuilder();

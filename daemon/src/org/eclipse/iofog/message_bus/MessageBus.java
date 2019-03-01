@@ -19,9 +19,11 @@ import org.eclipse.iofog.microservice.Receiver;
 import org.eclipse.iofog.microservice.Route;
 import org.eclipse.iofog.status_reporter.StatusReporter;
 import org.eclipse.iofog.utils.configuration.Configuration;
+import org.eclipse.iofog.utils.functional.Pair;
 import org.eclipse.iofog.utils.logging.LoggingService;
 
 import java.util.Collections;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
@@ -44,7 +46,8 @@ public class MessageBus implements IOFogModule {
     private MessageBusServer messageBusServer;
     private Map<String, Route> routes;
     private Map<String, MessagePublisher> publishers;
-    private Map<String, MessageReceiver> receivers;
+    private Map<String, LocalMessageReceiver> localReceivers;
+    private Map<Pair<String, String>, RemoteMessageReceiver> remoteReceivers;
     private MessageIdGenerator idGenerator;
     private static MessageBus instance;
     private MicroserviceManager microserviceManager;
@@ -83,10 +86,10 @@ public class MessageBus implements IOFogModule {
      * @param receiver - ID of {@link Microservice}
      */
     public synchronized void enableRealTimeReceiving(String receiver) {
-        MessageReceiver rec = receivers.get(receiver);
-        if (rec == null || !rec.isLocal())
-            return;
-        ((LocalMessageReceiver) rec).enableRealTimeReceiving();
+        LocalMessageReceiver rec = localReceivers.get(receiver);
+        if (rec != null) {
+            rec.enableRealTimeReceiving();
+        }
     }
 
     /**
@@ -95,10 +98,10 @@ public class MessageBus implements IOFogModule {
      * @param receiver - ID of {@link Microservice}
      */
     public synchronized void disableRealTimeReceiving(String receiver) {
-        MessageReceiver rec = receivers.get(receiver);
-        if (rec == null || !rec.isLocal())
-            return;
-        ((LocalMessageReceiver) rec).disableRealTimeReceiving();
+        LocalMessageReceiver rec = localReceivers.get(receiver);
+        if (rec != null) {
+            rec.disableRealTimeReceiving();
+        }
     }
 
     private Map<String, Route> getFilteredRoutes(Map<String, Route> routes) {
@@ -126,13 +129,6 @@ public class MessageBus implements IOFogModule {
         return result;
     }
 
-    private MessageReceiver getMessageReceiver(Receiver receiver) {
-        String receiverName = receiver.getMicroserviceUuid();
-        return receiver.isLocal()
-            ? new LocalMessageReceiver(receiver, messageBusServer.getConsumer(receiverName))
-            : new RemoteMessageReceiver(receiver, messageBusServer.getConsumer(receiverName));
-    }
-
     /**
      * initialize list of {@link Message} publishers and receivers
      */
@@ -143,7 +139,8 @@ public class MessageBus implements IOFogModule {
         routes = getFilteredRoutes(microserviceManager.getRoutes());
         idGenerator = new MessageIdGenerator();
         publishers = new ConcurrentHashMap<>();
-        receivers = new ConcurrentHashMap<>();
+        localReceivers = new ConcurrentHashMap<>();
+        remoteReceivers = new ConcurrentHashMap<>();
 
         if (routes == null)
             return;
@@ -155,7 +152,7 @@ public class MessageBus implements IOFogModule {
                 String publisher = entry.getKey();
                 Route route = entry.getValue();
                 initPublishers(publisher, route);
-                initReceivers(entry.getValue().getReceivers());
+                initReceivers(publisher, route);
             });
 
     }
@@ -171,10 +168,15 @@ public class MessageBus implements IOFogModule {
         ));
     }
 
-    private void initReceivers(List<Receiver> receiverList) {
-        receivers.putAll(receiverList
-            .stream()
-            .filter(receiver -> !receivers.containsKey(receiver.getMicroserviceUuid()))
+    private void initReceivers(String publisher, Route route) {
+        initLocalReceivers(route);
+        initRemoteReceivers(publisher, route);
+    }
+
+    private void initLocalReceivers(Route route) {
+        localReceivers.putAll(route.getReceivers().stream()
+            .filter(Receiver::isLocal)
+            .filter(receiver -> !localReceivers.containsKey(receiver.getMicroserviceUuid()))
             .collect(toMap(Receiver::getMicroserviceUuid, receiver -> {
                 try {
                     messageBusServer.createConsumer(receiver.getMicroserviceUuid());
@@ -182,7 +184,22 @@ public class MessageBus implements IOFogModule {
                     LoggingService.logError(MODULE_NAME + "(" + receiver.getMicroserviceUuid() + ")",
                         "unable to start receiver module --> " + e.getMessage(), e);
                 }
-                return getMessageReceiver(receiver);
+                return new LocalMessageReceiver(receiver, messageBusServer.getConsumer(receiver.getMicroserviceUuid()));
+            })));
+    }
+
+    private void initRemoteReceivers(String publisher, Route route) {
+        remoteReceivers.putAll(route.getReceivers().stream()
+            .filter(receiver -> !receiver.isLocal())
+            .filter(receiver -> !localReceivers.containsKey(receiver.getMicroserviceUuid()))
+            .collect(toMap(receiver -> Pair.of(publisher, receiver.getMicroserviceUuid()), receiver -> {
+                try {
+                    messageBusServer.createConsumer(receiver.getMicroserviceUuid());
+                } catch (Exception e) {
+                    LoggingService.logError(MODULE_NAME + "(" + receiver.getMicroserviceUuid() + ")",
+                        "unable to start receiver module --> " + e.getMessage(), e);
+                }
+                return new RemoteMessageReceiver(receiver, messageBusServer.getConsumer(receiver.getMicroserviceUuid()));
             })));
     }
 
@@ -269,33 +286,48 @@ public class MessageBus implements IOFogModule {
     }
 
     private void checkReceivers() {
-        receivers.forEach((receiverName, messageReceiver) -> {
+       checkLocalReceivers();
+       checkRemoteReceivers();
+    }
+
+    private void checkLocalReceivers() {
+        localReceivers.forEach((receiverName, messageReceiver) -> {
             if (messageBusServer.isConsumerClosed(receiverName)) {
                 logWarning("Consumer module for " + receiverName + " stopped. restarting...");
                 messageReceiver.close();
                 try {
                     messageBusServer.createConsumer(receiverName);
-                    MessageReceiver newMessageReceiver;
-                    if (messageReceiver.isLocal()) {
-                        newMessageReceiver = new LocalMessageReceiver(
-                            messageReceiver.getReceiver(),
-                            messageBusServer.getConsumer(receiverName)
-                        );
-                    } else {
-                        newMessageReceiver = new RemoteMessageReceiver(
-                            messageReceiver.getReceiver(),
-                            messageBusServer.getConsumer(receiverName)
-                        );
-                    }
-                    receivers.put(receiverName, newMessageReceiver);
+                    LocalMessageReceiver newMessageReceiver = new LocalMessageReceiver(
+                        messageReceiver.getReceiver(),
+                        messageBusServer.getConsumer(receiverName)
+                    );
+                    localReceivers.put(receiverName, newMessageReceiver);
                     logInfo("Consumer module restarted");
                 } catch (Exception e) {
                     logWarning("Unable to restart consumer module for " + receiverName + " --> " + e.getMessage());
                 }
-            } else if (!messageReceiver.isLocal()
-                && (((RemoteMessageReceiver) messageReceiver).getConnectorProducer() == null
-                || ((RemoteMessageReceiver) messageReceiver).getConnectorProducer().isClosed())) {
-                ((RemoteMessageReceiver) messageReceiver).enableConnectorProducing();
+            }
+        });
+    }
+
+    private void checkRemoteReceivers() {
+        remoteReceivers.forEach((pair, messageReceiver) -> {
+            if (messageBusServer.isConsumerClosed(pair._2())) {
+                logWarning("Consumer module for " + pair._2() + " stopped. restarting...");
+                messageReceiver.close();
+                try {
+                    messageBusServer.createConsumer(pair._2());
+                    RemoteMessageReceiver newMessageReceiver = new RemoteMessageReceiver(
+                        messageReceiver.getReceiver(),
+                        messageBusServer.getConsumer(pair._2())
+                    );
+                    remoteReceivers.put(pair, newMessageReceiver);
+                } catch (Exception e) {
+                    logWarning("Unable to restart consumer module for " + pair._2() + " --> " + e.getMessage());
+                }
+            } else if (messageReceiver.getConnectorProducer() == null
+                || messageReceiver.getConnectorProducer().isClosed()) {
+                messageReceiver.enableConnectorProducing();
             }
         });
     }
@@ -307,12 +339,8 @@ public class MessageBus implements IOFogModule {
     public void update() {
         synchronized (updateLock) {
             Map<String, Route> newRoutes = getFilteredRoutes(microserviceManager.getRoutes());
-            Map<String, Receiver> newReceivers = newRoutes.values().stream()
-                .flatMap(route -> route.getReceivers().stream())
-                .collect(toMap(Receiver::getMicroserviceUuid, Function.identity()));
-
             updatePublishers(newRoutes);
-            updateReceivers(newReceivers);
+            updateReceivers(newRoutes);
 
             routes = newRoutes;
 
@@ -327,34 +355,55 @@ public class MessageBus implements IOFogModule {
         }
     }
 
-    private void updateReceivers(Map<String, Receiver> newReceivers) {
-        receivers.forEach((receiverName, messageReceiver) -> {
-            if (!newReceivers.containsKey(receiverName)) {
+    private void updateReceivers(Map<String, Route> newRoutes) {
+        updateLocalReceivers(newRoutes);
+        updateRemoteReceivers(newRoutes);
+    }
+
+    private void updateRemoteReceivers(Map<String, Route> newRoutes) {
+        Map<Pair<String, String>, Receiver> remoteReceiverMap = new HashMap<>();
+        newRoutes.forEach((publisher, route) -> {
+            Map<Pair<String, String>, Receiver> publisherReceivers = route.getReceivers().stream()
+                .filter(receiver -> !receiver.isLocal())
+                .collect(toMap(receiver -> Pair.of(publisher, receiver.getMicroserviceUuid()), Function.identity()));
+            remoteReceiverMap.putAll(publisherReceivers);
+        });
+        remoteReceivers.forEach((pair, messageReceiver) -> {
+            if (!remoteReceiverMap.containsKey(pair)) {
                 messageReceiver.close();
-                messageBusServer.removeConsumer(receiverName);
+                messageBusServer.removeConsumer(pair._2());
             } else {
-                updateReceiver(newReceivers, receiverName, messageReceiver);
+                messageReceiver.update(remoteReceiverMap.get(pair));
             }
         });
-        receivers.entrySet().removeIf(entry -> !newReceivers.containsKey(entry.getKey()));
-
-        receivers.putAll(
-            newReceivers.values().stream()
-                .filter(newReceiver -> !receivers.containsKey(newReceiver.getMicroserviceUuid()))
-                .collect(toMap(Receiver::getMicroserviceUuid,
-                    this::getMessageReceiver
+        remoteReceiverMap.entrySet().removeIf(entry -> !remoteReceiverMap.containsKey(entry.getKey()));
+        remoteReceivers.putAll(
+            remoteReceiverMap.entrySet().stream()
+                .filter(entry -> !remoteReceivers.containsKey(entry.getKey()))
+                .collect(toMap(Map.Entry::getKey,
+                    entry -> new RemoteMessageReceiver(entry.getValue(), messageBusServer.getConsumer(entry.getValue().getMicroserviceUuid()))
                 )));
     }
 
-    private void updateReceiver(Map<String, Receiver> newReceivers, String receiverName, MessageReceiver messageReceiver) {
-        Receiver newReceiver = newReceivers.get(receiverName);
-        if (messageReceiver.isLocal() != newReceiver.isLocal()) {
-            messageReceiver.close();
-            MessageReceiver newMessageReceiver = getMessageReceiver(newReceiver);
-            receivers.put(receiverName, newMessageReceiver);
-        } else if (!messageReceiver.isLocal()) {
-            messageReceiver.update(newReceivers.get(receiverName));
-        }
+    private void updateLocalReceivers(Map<String, Route> newRoutes) {
+        Map<String, Receiver> localReceiverMap = newRoutes.values().stream()
+            .flatMap(route -> route.getReceivers().stream())
+            .filter(Receiver::isLocal)
+            .distinct()
+            .collect(toMap(Receiver::getMicroserviceUuid, Function.identity()));
+        localReceivers.forEach((receiverName, messageReceiver) -> {
+            if (!localReceiverMap.containsKey(receiverName)) {
+                messageReceiver.close();
+                messageBusServer.removeConsumer(receiverName);
+            }
+        });
+        localReceivers.entrySet().removeIf(entry -> !localReceiverMap.containsKey(entry.getKey()));
+        localReceivers.putAll(
+            localReceiverMap.values().stream()
+                .filter(newReceiver -> !localReceivers.containsKey(newReceiver.getMicroserviceUuid()))
+                .collect(toMap(Receiver::getMicroserviceUuid,
+                    newReceiver -> new LocalMessageReceiver(newReceiver, messageBusServer.getConsumer(newReceiver.getMicroserviceUuid()))
+                )));
     }
 
     private void updatePublishers(Map<String, Route> newRoutes) {
@@ -417,11 +466,16 @@ public class MessageBus implements IOFogModule {
      * closes receivers and publishers and stops ActiveMQ server
      */
     public void stop() {
-        for (MessageReceiver receiver : receivers.values())
+        for (MessageReceiver receiver : localReceivers.values()) {
             receiver.close();
+        }
+        for (MessageReceiver receiver : remoteReceivers.values()) {
+            receiver.close();
+        }
 
-        for (MessagePublisher publisher : publishers.values())
+        for (MessagePublisher publisher : publishers.values()) {
             publisher.close();
+        }
         try {
             messageBusServer.stopServer();
         } catch (Exception exp) {
@@ -445,8 +499,8 @@ public class MessageBus implements IOFogModule {
      * @param receiver - ID of {@link Microservice}
      * @return
      */
-    public MessageReceiver getReceiver(String receiver) {
-        return receivers.get(receiver);
+    public LocalMessageReceiver getReceiver(String receiver) {
+        return localReceivers.get(receiver);
     }
 
     /**
