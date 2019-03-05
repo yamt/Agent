@@ -66,7 +66,7 @@ public class Constants {
         }
     }
 
-    public static final int NUMBER_OF_MODULES = 9;
+    public static final int NUMBER_OF_MODULES = 10;
 
     public static final int RESOURCE_CONSUMPTION_MANAGER = 0;
     public static final int PROCESS_MANAGER = 1;
@@ -77,6 +77,7 @@ public class Constants {
     public static final int RESOURCE_MANAGER = 6;
     public static final int CONNECTOR_MANAGER = 7;
     public static final int TRACKER= 8;
+    public static final int SECURITY_MANAGER = 9;
 
     public static PrintStream systemOut;
 
@@ -112,4 +113,8 @@ public class Constants {
     public static final String TRUSTSTORE_DIR = CONFIG_DIR + "truststore/";
 
     public static final String MICROSERVICE_FILE = "microservices.json";
+
+    public static final String TRACKING_UUID_PATH = CONFIG_DIR + "tracking-uuid";
+
+    public static final String PLUGINS_PATH = CONFIG_DIR + "plugins";
 }

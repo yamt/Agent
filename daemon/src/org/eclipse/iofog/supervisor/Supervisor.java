@@ -26,6 +26,7 @@ import org.eclipse.iofog.tracking.TrackingEventType;
 import org.eclipse.iofog.tracking.TrackingInfoUtils;
 import org.eclipse.iofog.utils.configuration.Configuration;
 import org.eclipse.iofog.utils.logging.LoggingService;
+import org.eclipse.iofog.security_manager.SecurityManager;
 
 import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
@@ -90,6 +91,7 @@ public class Supervisor implements IOFogModule {
 		startModule(ProcessManager.getInstance());
 		startModule(new ResourceManager());
 		startModule(Tracker.getInstance());
+		startModule(SecurityManager.getInstance());
 
         messageBus = MessageBus.getInstance();
         startModule(messageBus);
