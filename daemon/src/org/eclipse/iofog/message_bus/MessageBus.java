@@ -376,7 +376,7 @@ public class MessageBus implements IOFogModule {
                 messageReceiver.update(remoteReceiverMap.get(pair));
             }
         });
-        remoteReceiverMap.entrySet().removeIf(entry -> !remoteReceiverMap.containsKey(entry.getKey()));
+        remoteReceivers.entrySet().removeIf(entry -> !remoteReceiverMap.containsKey(entry.getKey()));
         remoteReceivers.putAll(
             remoteReceiverMap.entrySet().stream()
                 .filter(entry -> !remoteReceivers.containsKey(entry.getKey()))
