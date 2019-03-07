@@ -2,6 +2,7 @@ package org.eclipse.iofog.message_bus;
 
 import org.apache.activemq.artemis.api.core.ActiveMQException;
 import org.apache.activemq.artemis.api.core.client.ClientConsumer;
+import org.apache.activemq.artemis.api.core.client.MessageHandler;
 import org.eclipse.iofog.connector_client.ConnectorManager;
 import org.eclipse.iofog.connector_client.ConnectorProducer;
 import org.eclipse.iofog.local_api.RemoteMessageCallback;
@@ -17,7 +18,7 @@ public class RemoteMessageReceiver extends MessageReceiver {
 
     public RemoteMessageReceiver(Receiver receiver, ClientConsumer consumer) {
         super(receiver, consumer);
-        enableConnectorProducing();
+        setConnectorHandler();
     }
 
     @Override
@@ -25,39 +26,64 @@ public class RemoteMessageReceiver extends MessageReceiver {
         return false;
     }
 
+    public synchronized boolean isConsumerListenerEnabled() {
+        boolean result = false;
+        if (consumer != null && !consumer.isClosed()) {
+            try {
+                MessageHandler messageHandler = consumer.getMessageHandler();
+                result = messageHandler != null;
+            } catch (ActiveMQException e) {
+                logError(MODULE_NAME, "Unable to get message bus handler: " + e.getMessage(), e);
+            }
+        }
+        return result;
+    }
+
     synchronized ConnectorProducer getConnectorProducer() {
         return connectorProducer;
     }
 
-    synchronized void enableConnectorProducing() {
+    synchronized void setConnectorHandler() {
         if (consumer != null && !consumer.isClosed()) {
-            connectorProducer = ConnectorManager.INSTANCE.getProducer(receiver.getMicroserviceUuid(), receiver.getConnectorProducerConfig());
+
+            if (connectorProducer == null || connectorProducer.isClosed()) {
+                setMessageHandler(null);
+            }
+
+            ConnectorProducer connectorProducer = ConnectorManager.INSTANCE.getProducer(receiver.getMicroserviceUuid(), receiver.getConnectorProducerConfig());
             if (connectorProducer != null && !connectorProducer.isClosed()) {
+                this.connectorProducer = connectorProducer;
                 listener = new MessageListener(new RemoteMessageCallback(
                     receiver.getConnectorProducerConfig().getPublisherId(),
                     connectorProducer)
                 );
-                try {
-                    consumer.setMessageHandler(listener);
-                } catch (ActiveMQException e) {
-                    logError(MODULE_NAME, "Unable to set message bus handler: " + e.getMessage(), e);
-                }
+                setMessageHandler(listener);
             }
         }
     }
 
-    private void disableConnectorProducing() {
+    private void setMessageHandler(MessageHandler handler) {
+        try {
+            consumer.setMessageHandler(handler);
+        } catch (ActiveMQException e) {
+            logError(MODULE_NAME, "Unable to set message bus handler: " + e.getMessage(), e);
+        }
+    }
+
+    private void unsetConnectorHandler() {
         if (connectorProducer != null) {
             ConnectorManager.INSTANCE.removeProducer(connectorProducer.getName());
         }
+        connectorProducer = null;
+        setMessageHandler(null);
     }
 
     @Override
     public synchronized void update(Receiver receiver) {
         if (!this.receiver.getConnectorProducerConfig().equals(receiver.getConnectorProducerConfig())) {
-            disableConnectorProducing();
+            unsetConnectorHandler();
             this.receiver = receiver;
-            enableConnectorProducing();
+            setConnectorHandler();
         }
     }
 
@@ -65,7 +91,7 @@ public class RemoteMessageReceiver extends MessageReceiver {
     public synchronized void close() {
         if (consumer == null)
             return;
-        disableConnectorProducing();
+        unsetConnectorHandler();
         try {
             consumer.close();
         } catch (Exception exp) {

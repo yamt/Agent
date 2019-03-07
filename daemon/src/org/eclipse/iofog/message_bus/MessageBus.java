@@ -326,8 +326,9 @@ public class MessageBus implements IOFogModule {
                     logWarning("Unable to restart consumer module for " + pair._2() + " --> " + e.getMessage());
                 }
             } else if (messageReceiver.getConnectorProducer() == null
-                || messageReceiver.getConnectorProducer().isClosed()) {
-                messageReceiver.enableConnectorProducing();
+                || messageReceiver.getConnectorProducer().isClosed()
+                || !messageReceiver.isConsumerListenerEnabled()) {
+                messageReceiver.setConnectorHandler();
             }
         });
     }

@@ -12,17 +12,16 @@
  *******************************************************************************/
 package org.eclipse.iofog.local_api;
 
-import java.util.Map;
-
+import io.netty.buffer.ByteBuf;
+import io.netty.channel.ChannelHandlerContext;
+import io.netty.handler.codec.http.websocketx.BinaryWebSocketFrame;
 import org.eclipse.iofog.message_bus.Message;
 import org.eclipse.iofog.message_bus.MessageBus;
 import org.eclipse.iofog.status_reporter.StatusReporter;
 import org.eclipse.iofog.utils.BytesUtil;
 import org.eclipse.iofog.utils.logging.LoggingService;
 
-import io.netty.buffer.ByteBuf;
-import io.netty.channel.ChannelHandlerContext;
-import io.netty.handler.codec.http.websocketx.BinaryWebSocketFrame;
+import java.util.Map;
 
 /**
  * Helper class for the message websocket
@@ -56,6 +55,7 @@ public class MessageWebsocketWorker implements Runnable{
 				if(tryCount < 10){
 					sendRealTimeMessage(ctx);
 				}else{
+					LoggingService.logInfo(MODULE_NAME, " Initiating message signal expires");
 					WebSocketMap.unackMessageSendingMap.remove(ctx);
 					MessageBus.getInstance().disableRealTimeReceiving(WebsocketUtil.getIdForWebsocket(ctx, WebSocketMap.messageWebsocketMap));
 					WebsocketUtil.removeWebsocketContextFromMap(ctx, WebSocketMap.messageWebsocketMap);	
