@@ -67,13 +67,17 @@ public class MessageBusServer {
 	}
 	
 	boolean isProducerClosed(String name) {
-		ClientProducer producer = producers.get(name);
-		return producer == null || producer.isClosed();
+		synchronized (messageBusSessionLock) {
+			ClientProducer producer = producers.get(name);
+			return producer == null || producer.isClosed();
+		}
 	}
 	
 	boolean isConsumerClosed(String name) {
-		ClientConsumer consumer = consumers.get(name); 
-		return consumer == null || consumer.isClosed();
+		synchronized (messageBusSessionLock) {
+			ClientConsumer consumer = consumers.get(name);
+			return consumer == null || consumer.isClosed();
+		}
 	}
 	
 	/**
