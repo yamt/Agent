@@ -59,6 +59,12 @@ public class MessageBusServer {
 	boolean isServerActive() {
 		return server.isActive();
 	}
+
+	boolean isMessageBusSessionClosed() {
+		synchronized (messageBusSessionLock) {
+			return messageBusSession.isClosed();
+		}
+	}
 	
 	boolean isProducerClosed(String name) {
 		ClientProducer producer = producers.get(name);

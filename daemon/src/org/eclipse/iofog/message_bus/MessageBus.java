@@ -245,11 +245,12 @@ public class MessageBus implements IOFogModule {
     };
 
     private void checkMessageBusServer() {
-        if (!messageBusServer.isServerActive()) {
+        if (!messageBusServer.isServerActive() || messageBusServer.isMessageBusSessionClosed()) {
             logWarning("Server is not active. restarting...");
             stop();
             try {
                 messageBusServer.startServer();
+                messageBusServer.initialize();
                 logInfo("Server restarted");
                 init();
             } catch (Exception e) {
