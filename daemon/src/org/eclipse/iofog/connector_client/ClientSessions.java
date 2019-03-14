@@ -1,3 +1,15 @@
+/*
+ * *******************************************************************************
+ *  * Copyright (c) 2019 Edgeworx, Inc.
+ *  *
+ *  * This program and the accompanying materials are made available under the
+ *  * terms of the Eclipse Public License v. 2.0 which is available at
+ *  * http://www.eclipse.org/legal/epl-2.0
+ *  *
+ *  * SPDX-License-Identifier: EPL-2.0
+ *  *******************************************************************************
+ *
+ */
 package org.eclipse.iofog.connector_client;
 
 import org.apache.activemq.artemis.api.core.ActiveMQException;
@@ -12,6 +24,10 @@ import org.apache.activemq.artemis.core.remoting.impl.netty.TransportConstants;
 import java.util.HashMap;
 import java.util.Map;
 
+/**
+ * IoFog Connector client session factory
+ * @author epankou
+ */
 class ClientSessions {
     static ClientSession defaultAuthenticatedSession(ClientSessionFactory sf,
                                                      String username,

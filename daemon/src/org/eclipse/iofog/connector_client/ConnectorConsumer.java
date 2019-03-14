@@ -1,3 +1,15 @@
+/*
+ * *******************************************************************************
+ *  * Copyright (c) 2019 Edgeworx, Inc.
+ *  *
+ *  * This program and the accompanying materials are made available under the
+ *  * terms of the Eclipse Public License v. 2.0 which is available at
+ *  * http://www.eclipse.org/legal/epl-2.0
+ *  *
+ *  * SPDX-License-Identifier: EPL-2.0
+ *  *******************************************************************************
+ *
+ */
 package org.eclipse.iofog.connector_client;
 
 import org.apache.activemq.artemis.api.core.ActiveMQException;
@@ -7,6 +19,10 @@ import org.eclipse.iofog.utils.Constants;
 
 import static org.eclipse.iofog.utils.logging.LoggingService.logWarning;
 
+/**
+ * IoFog Connector client consumer
+ * @author epankou
+ */
 public class ConnectorConsumer {
     public final static String MODULE_NAME = "Connector Consumer";
     private ClientConsumer consumer;
@@ -23,6 +39,12 @@ public class ConnectorConsumer {
         }
     }
 
+    /**
+     * Creates activemq consumer and sets message handler
+     * @param session IoFog Connector session
+     * @param config IoFog Connector client config
+     * @throws ActiveMQException exception if consumer creation is unsuccessful
+     */
     void init(ClientSession session, ClientConfig config) throws ActiveMQException {
         this.consumer = create(session, config.getPublisherId(), config.getPassKey());
         if (consumer != null && !consumer.isClosed()) {

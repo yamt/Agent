@@ -57,6 +57,9 @@ public class MessagePublisher implements AutoCloseable {
 		return route;
 	}
 
+	/**
+	 * creates {@link ConnectorConsumer} to receiver messages from IoFog Connector
+	 */
 	synchronized void enableConnectorConsuming() {
 		if (!route.getProducer().isLocal() && producer != null && !producer.isClosed()) {
 			String name = route.getProducer().getMicroserviceId();
@@ -67,6 +70,9 @@ public class MessagePublisher implements AutoCloseable {
 		}
 	}
 
+	/**
+	 * removes {@link ConnectorConsumer}
+	 */
 	private void disableConnectorConsuming() {
 		if (!route.getProducer().isLocal() && connectorConsumer != null) {
 			ConnectorManager.INSTANCE.removeConsumer(connectorConsumer.getName());
@@ -103,6 +109,10 @@ public class MessagePublisher implements AutoCloseable {
 		}
 	}
 
+	/**
+	 * updates message publisher with new route
+	 * @param route
+	 */
 	synchronized void updateRoute(Route route) {
 		if (!this.route.equals(route)) {
 			if (this.route.getProducer().isLocal() != route.getProducer().isLocal()) {

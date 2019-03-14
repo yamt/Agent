@@ -20,7 +20,6 @@ import org.eclipse.iofog.message_bus.Message;
  * @since 2016
  */
 public class MessageCallback {
-	private static final String MODULE_NAME = "Message Callback";
 	private final String name;
 	
 	public MessageCallback(String name) {

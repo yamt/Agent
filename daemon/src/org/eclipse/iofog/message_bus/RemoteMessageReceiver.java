@@ -1,3 +1,15 @@
+/*
+ * *******************************************************************************
+ *  * Copyright (c) 2019 Edgeworx, Inc.
+ *  *
+ *  * This program and the accompanying materials are made available under the
+ *  * terms of the Eclipse Public License v. 2.0 which is available at
+ *  * http://www.eclipse.org/legal/epl-2.0
+ *  *
+ *  * SPDX-License-Identifier: EPL-2.0
+ *  *******************************************************************************
+ *
+ */
 package org.eclipse.iofog.message_bus;
 
 import org.apache.activemq.artemis.api.core.ActiveMQException;
@@ -10,6 +22,10 @@ import org.eclipse.iofog.microservice.Receiver;
 
 import static org.eclipse.iofog.utils.logging.LoggingService.logError;
 
+/**
+ * Remote Message Receiver
+ * @author epankou
+ */
 public class RemoteMessageReceiver extends MessageReceiver {
 
     private static final String MODULE_NAME = "Remote Message Receiver";
@@ -26,6 +42,10 @@ public class RemoteMessageReceiver extends MessageReceiver {
         return false;
     }
 
+    /**
+     * checks if any message handler is set for message bus consumer
+     * @return true if handler is set, false otherwise
+     */
     public synchronized boolean isConsumerListenerEnabled() {
         boolean result = false;
         if (consumer != null && !consumer.isClosed()) {
@@ -43,6 +63,9 @@ public class RemoteMessageReceiver extends MessageReceiver {
         return connectorProducer;
     }
 
+    /**
+     * sets message handler to send messages to IoFog Connector
+     */
     synchronized void setConnectorHandler() {
         if (consumer != null && !consumer.isClosed()) {
 
@@ -78,6 +101,10 @@ public class RemoteMessageReceiver extends MessageReceiver {
         setMessageHandler(null);
     }
 
+    /**
+     * updates remote message receiver with new one
+     * @param receiver
+     */
     @Override
     public synchronized void update(Receiver receiver) {
         if (!this.receiver.getConnectorProducerConfig().equals(receiver.getConnectorProducerConfig())) {

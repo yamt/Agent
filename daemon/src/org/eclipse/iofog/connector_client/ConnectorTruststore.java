@@ -1,3 +1,15 @@
+/*
+ * *******************************************************************************
+ *  * Copyright (c) 2019 Edgeworx, Inc.
+ *  *
+ *  * This program and the accompanying materials are made available under the
+ *  * terms of the Eclipse Public License v. 2.0 which is available at
+ *  * http://www.eclipse.org/legal/epl-2.0
+ *  *
+ *  * SPDX-License-Identifier: EPL-2.0
+ *  *******************************************************************************
+ *
+ */
 package org.eclipse.iofog.connector_client;
 
 import java.io.ByteArrayInputStream;
@@ -16,6 +28,9 @@ import java.security.cert.CertificateFactory;
 
 import static org.eclipse.iofog.utils.logging.LoggingService.logInfo;
 
+/**
+ * Server cert truststore to communicate to IoFog Connector over TLS
+ */
 class ConnectorTruststore {
     public static final String MODULE_NAME = "Connector Truststore";
 

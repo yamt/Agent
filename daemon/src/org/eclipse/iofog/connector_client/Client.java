@@ -1,3 +1,15 @@
+/*
+ * *******************************************************************************
+ *  * Copyright (c) 2019 Edgeworx, Inc.
+ *  *
+ *  * This program and the accompanying materials are made available under the
+ *  * terms of the Eclipse Public License v. 2.0 which is available at
+ *  * http://www.eclipse.org/legal/epl-2.0
+ *  *
+ *  * SPDX-License-Identifier: EPL-2.0
+ *  *******************************************************************************
+ *
+ */
 package org.eclipse.iofog.connector_client;
 
 import org.apache.activemq.artemis.api.core.ActiveMQException;
@@ -10,6 +22,10 @@ import java.util.concurrent.ConcurrentHashMap;
 
 import static org.eclipse.iofog.utils.logging.LoggingService.logWarning;
 
+/**
+ * IoFog Connector client
+ * @author epankou
+ */
 public class Client {
 
     public static final String MODULE_NAME = "Connector Client";
@@ -53,7 +69,7 @@ public class Client {
         }
     }
 
-    synchronized void ejectSession(String name) throws ActiveMQException {
+    synchronized void removeSession(String name) throws ActiveMQException {
         if (sessions.containsKey(name)) {
             sessions.get(name).close();
             sessions.remove(name);
@@ -70,6 +86,11 @@ public class Client {
         sessions.clear();
     }
 
+    /**
+     * Creates IoFog Connector client session factory
+     * @param config IoFog Connector config
+     * @throws Exception exception
+     */
     void init(ConnectorConfig config) throws Exception {
         try {
             close();

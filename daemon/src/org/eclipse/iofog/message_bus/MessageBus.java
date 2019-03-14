@@ -104,6 +104,11 @@ public class MessageBus implements IOFogModule {
         }
     }
 
+    /**
+     * Substitutes routes with remote receivers with filtered ones
+     * @param routes old route map
+     * @return new route map
+     */
     private Map<String, Route> getFilteredRoutes(Map<String, Route> routes) {
         Map<String, Route> result = new ConcurrentHashMap<>();
         for (Map.Entry<String, Route> entry : routes.entrySet()) {

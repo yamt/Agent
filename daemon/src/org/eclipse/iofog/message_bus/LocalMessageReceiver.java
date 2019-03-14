@@ -1,3 +1,15 @@
+/*
+ * *******************************************************************************
+ *  * Copyright (c) 2019 Edgeworx, Inc.
+ *  *
+ *  * This program and the accompanying materials are made available under the
+ *  * terms of the Eclipse Public License v. 2.0 which is available at
+ *  * http://www.eclipse.org/legal/epl-2.0
+ *  *
+ *  * SPDX-License-Identifier: EPL-2.0
+ *  *******************************************************************************
+ *
+ */
 package org.eclipse.iofog.message_bus;
 
 import org.apache.activemq.artemis.api.core.ActiveMQException;
@@ -12,6 +24,10 @@ import java.util.List;
 import static org.eclipse.iofog.message_bus.MessageBusServer.messageBusSessionLock;
 import static org.eclipse.iofog.utils.logging.LoggingService.logError;
 
+/**
+ * Local Message Receiver
+ * @author epankou
+ */
 public class LocalMessageReceiver extends MessageReceiver {
     private static final String MODULE_NAME = "Local Message Receiver";
 

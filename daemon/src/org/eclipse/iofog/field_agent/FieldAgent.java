@@ -35,7 +35,6 @@ import org.eclipse.iofog.status_reporter.StatusReporter;
 import org.eclipse.iofog.tracking.Tracker;
 import org.eclipse.iofog.tracking.TrackingEventType;
 import org.eclipse.iofog.tracking.TrackingInfoUtils;
-import org.eclipse.iofog.utils.Constants;
 import org.eclipse.iofog.utils.Orchestrator;
 import org.eclipse.iofog.utils.configuration.Configuration;
 import org.eclipse.iofog.utils.logging.LoggingService;
@@ -540,6 +539,10 @@ public class FieldAgent implements IOFogModule {
                 .collect(toList());
     }
 
+    /**
+     * gets list of microservice routings from file or IoFog controller
+     * @param fromFile - load from file
+     */
     private void loadRoutes(boolean fromFile) {
         logInfo("loading routes...");
         if (notProvisioned() || !isControllerConnected(fromFile)) {
@@ -569,6 +572,10 @@ public class FieldAgent implements IOFogModule {
         }
     }
 
+    /**
+     * gets list of IoFog Connectors from file or IoFog controller
+     * @param fromFile - load from file
+     */
     private void loadConnectors(boolean fromFile) {
         logInfo("loading connectors...");
         if (notProvisioned() || !isControllerConnected(fromFile)) {

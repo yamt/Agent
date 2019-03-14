@@ -1,3 +1,15 @@
+/*
+ * *******************************************************************************
+ *  * Copyright (c) 2019 Edgeworx, Inc.
+ *  *
+ *  * This program and the accompanying materials are made available under the
+ *  * terms of the Eclipse Public License v. 2.0 which is available at
+ *  * http://www.eclipse.org/legal/epl-2.0
+ *  *
+ *  * SPDX-License-Identifier: EPL-2.0
+ *  *******************************************************************************
+ *
+ */
 package org.eclipse.iofog.connector_client;
 
 import org.apache.activemq.artemis.api.core.ActiveMQException;
@@ -11,7 +23,7 @@ import static org.eclipse.iofog.utils.logging.LoggingService.logWarning;
 
 public class ClientMonitor implements Runnable {
 
-    public static final String MODULE_NAME = "Client Monitor";
+    public static final String MODULE_NAME = "Connector Client Monitor";
 
     private ConnectorManager connectorManager;
 
@@ -54,7 +66,7 @@ public class ClientMonitor implements Runnable {
             .forEach(connectorConsumer -> {
                 try {
                     if (connectorConsumer.isClosed()) {
-                        client.ejectSession(connectorConsumer.getName());
+                        client.removeSession(connectorConsumer.getName());
                         ClientSession session = client.startSession(connectorConsumer.getName());
                         connectorConsumer.init(session, connectorConsumer.getConfig());
                     }
@@ -77,7 +89,7 @@ public class ClientMonitor implements Runnable {
             .forEach(connectorProducer -> {
                 try {
                     if (connectorProducer.isClosed()) {
-                        client.ejectSession(connectorProducer.getName());
+                        client.removeSession(connectorProducer.getName());
                         ClientSession session = client.startSession(connectorProducer.getName());
                         connectorProducer.init(session);
                     }

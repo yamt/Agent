@@ -1,3 +1,15 @@
+/*
+ * *******************************************************************************
+ *  * Copyright (c) 2019 Edgeworx, Inc.
+ *  *
+ *  * This program and the accompanying materials are made available under the
+ *  * terms of the Eclipse Public License v. 2.0 which is available at
+ *  * http://www.eclipse.org/legal/epl-2.0
+ *  *
+ *  * SPDX-License-Identifier: EPL-2.0
+ *  *******************************************************************************
+ *
+ */
 package org.eclipse.iofog.connector_client;
 
 import org.apache.activemq.artemis.api.core.ActiveMQException;
@@ -9,6 +21,10 @@ import org.eclipse.iofog.utils.Constants;
 
 import static org.eclipse.iofog.utils.logging.LoggingService.logWarning;
 
+/**
+ * IoFog Connector client producer
+ * @author epankou
+ */
 public class ConnectorProducer {
     public final static String MODULE_NAME = "Connector Producer";
     private ClientProducer producer;
@@ -26,6 +42,11 @@ public class ConnectorProducer {
         }
     }
 
+    /**
+     * Creates activemq producer
+     * @param session activemq session
+     * @throws ActiveMQException exception if producer creation is unsuccessful
+     */
     void init(ClientSession session) throws ActiveMQException {
         this.session = session;
         this.producer = create(session);

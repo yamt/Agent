@@ -1,3 +1,15 @@
+/*
+ * *******************************************************************************
+ *  * Copyright (c) 2019 Edgeworx, Inc.
+ *  *
+ *  * This program and the accompanying materials are made available under the
+ *  * terms of the Eclipse Public License v. 2.0 which is available at
+ *  * http://www.eclipse.org/legal/epl-2.0
+ *  *
+ *  * SPDX-License-Identifier: EPL-2.0
+ *  *******************************************************************************
+ *
+ */
 package org.eclipse.iofog.connector_client;
 
 import org.apache.activemq.artemis.api.core.ActiveMQException;
@@ -8,6 +20,10 @@ import org.eclipse.iofog.utils.Constants;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 
+/**
+ * IoFog Connector client manager
+ * @author epankou
+ */
 public enum ConnectorManager implements IOFogModule {
     INSTANCE;
 
@@ -27,6 +43,10 @@ public enum ConnectorManager implements IOFogModule {
         return connectorConsumers;
     }
 
+    /**
+     * Updates connector info received from IoFog Controller
+     * @param connectors connector info
+     */
     public void setConnectors(Map<Integer, ConnectorConfig> connectors) {
         connectors.forEach(this::updateConnector);
 
@@ -100,7 +120,7 @@ public enum ConnectorManager implements IOFogModule {
         if (connectorProducers.containsKey(name)) {
             ConnectorProducer producer = connectorProducers.get(name);
             producer.close();
-            ejectSession(name, producer.getConfig().getConnectorId());
+            removeSession(name, producer.getConfig().getConnectorId());
             connectorProducers.remove(name);
         }
     }
@@ -109,10 +129,11 @@ public enum ConnectorManager implements IOFogModule {
         if (connectorConsumers.containsKey(name)) {
             ConnectorConsumer consumer = connectorConsumers.get(name);
             consumer.close();
-            ejectSession(name, consumer.getConfig().getConnectorId());
+            removeSession(name, consumer.getConfig().getConnectorId());
             connectorConsumers.remove(name);
         }
     }
+
 
     private void initConnectorClient(int connectorId) {
         Client client = clients.get(connectorId);
@@ -125,11 +146,11 @@ public enum ConnectorManager implements IOFogModule {
         }
     }
 
-    private void ejectSession(String name, int connectorId) {
+    private void removeSession(String name, int connectorId) {
         if (clients.containsKey(connectorId)) {
             Client client = clients.get(connectorId);
             try {
-                client.ejectSession(name);
+                client.removeSession(name);
             } catch (ActiveMQException e) {
                 logWarning(String.format(
                     "Connector id %d, session ejection error: %s",
