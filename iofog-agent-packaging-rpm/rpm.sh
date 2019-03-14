@@ -56,11 +56,11 @@ fi
 </dev/urandom tr -dc A-Za-z0-9 | head -c32 > /etc/iofog-agent/local-api
 
 mkdir -p /etc/iofog-agent/truststore
+mkdir -p /etc/iofog-agent/plugins
 mkdir -p /var/backups/iofog-agent
 mkdir -p /var/log/iofog-agent
 mkdir -p /var/lib/iofog-agent
 mkdir -p /var/run/iofog-agent
-mkdir -p /etc/iofog-agent/plugins
 
 chown -R :iofog-agent /etc/iofog-agent
 chown -R :iofog-agent /var/log/iofog-agent
