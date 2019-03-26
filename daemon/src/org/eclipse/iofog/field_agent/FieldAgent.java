@@ -122,35 +122,35 @@ public class FieldAgent implements IOFogModule {
      */
     private JsonObject getFogStatus() {
         return Json.createObjectBuilder()
-                .add("daemonStatus", StatusReporter.getSupervisorStatus().getDaemonStatus().toString())
-                .add("daemonOperatingDuration", StatusReporter.getSupervisorStatus().getOperationDuration())
-                .add("daemonLastStart", StatusReporter.getSupervisorStatus().getDaemonLastStart())
-                .add("memoryUsage", StatusReporter.getResourceConsumptionManagerStatus().getMemoryUsage())
-                .add("diskUsage", StatusReporter.getResourceConsumptionManagerStatus().getDiskUsage())
-                .add("cpuUsage", StatusReporter.getResourceConsumptionManagerStatus().getCpuUsage())
-                .add("memoryViolation", StatusReporter.getResourceConsumptionManagerStatus().isMemoryViolation())
-                .add("diskViolation", StatusReporter.getResourceConsumptionManagerStatus().isDiskViolation())
-                .add("cpuViolation", StatusReporter.getResourceConsumptionManagerStatus().isCpuViolation())
-                .add("systemAvailableDisk", StatusReporter.getResourceConsumptionManagerStatus().getAvailableDisk())
-                .add("systemAvailableMemory", StatusReporter.getResourceConsumptionManagerStatus().getAvailableMemory())
-                .add("systemTotalCpu", StatusReporter.getResourceConsumptionManagerStatus().getTotalCpu())
-                .add("microserviceStatus", StatusReporter.getProcessManagerStatus().getJsonMicroservicesStatus())
-                .add("repositoryCount", StatusReporter.getProcessManagerStatus().getRegistriesCount())
-                .add("repositoryStatus", StatusReporter.getProcessManagerStatus().getJsonRegistriesStatus())
-                .add("systemTime", StatusReporter.getStatusReporterStatus().getSystemTime())
-                .add("lastStatusTime", StatusReporter.getStatusReporterStatus().getLastUpdate())
-                .add("ipAddress", IOFogNetworkInterface.getCurrentIpAddress())
-                .add("processedMessages", StatusReporter.getMessageBusStatus().getProcessedMessages())
-                .add("microserviceMessageCounts", StatusReporter.getMessageBusStatus().getJsonPublishedMessagesPerMicroservice())
-                .add("messageSpeed", StatusReporter.getMessageBusStatus().getAverageSpeed())
-                .add("lastCommandTime", StatusReporter.getFieldAgentStatus().getLastCommandTime())
-                .add("tunnelStatus", StatusReporter.getSshManagerStatus().getJsonProxyStatus())
-                .add("version", getVersion())
-                .add("securityStatus", StatusReporter.getSecurityStatus().getStatus().toString())
-                .add("securityViolationInfo", StatusReporter.getSecurityStatus().getSecurityViolationInfo())
-                .add("isReadyToUpgrade", isReadyToUpgrade())
-                .add("isReadyToRollback", isReadyToRollback())
-                .build();
+            .add("daemonStatus", StatusReporter.getSupervisorStatus().getDaemonStatus().toString())
+            .add("daemonOperatingDuration", StatusReporter.getSupervisorStatus().getOperationDuration())
+            .add("daemonLastStart", StatusReporter.getSupervisorStatus().getDaemonLastStart())
+            .add("memoryUsage", StatusReporter.getResourceConsumptionManagerStatus().getMemoryUsage())
+            .add("diskUsage", StatusReporter.getResourceConsumptionManagerStatus().getDiskUsage())
+            .add("cpuUsage", StatusReporter.getResourceConsumptionManagerStatus().getCpuUsage())
+            .add("memoryViolation", StatusReporter.getResourceConsumptionManagerStatus().isMemoryViolation())
+            .add("diskViolation", StatusReporter.getResourceConsumptionManagerStatus().isDiskViolation())
+            .add("cpuViolation", StatusReporter.getResourceConsumptionManagerStatus().isCpuViolation())
+            .add("systemAvailableDisk", StatusReporter.getResourceConsumptionManagerStatus().getAvailableDisk())
+            .add("systemAvailableMemory", StatusReporter.getResourceConsumptionManagerStatus().getAvailableMemory())
+            .add("systemTotalCpu", StatusReporter.getResourceConsumptionManagerStatus().getTotalCpu())
+            .add("microserviceStatus", StatusReporter.getProcessManagerStatus().getJsonMicroservicesStatus())
+            .add("repositoryCount", StatusReporter.getProcessManagerStatus().getRegistriesCount())
+            .add("repositoryStatus", StatusReporter.getProcessManagerStatus().getJsonRegistriesStatus())
+            .add("systemTime", StatusReporter.getStatusReporterStatus().getSystemTime())
+            .add("lastStatusTime", StatusReporter.getStatusReporterStatus().getLastUpdate())
+            .add("ipAddress", IOFogNetworkInterface.getCurrentIpAddress())
+            .add("processedMessages", StatusReporter.getMessageBusStatus().getProcessedMessages())
+            .add("microserviceMessageCounts", StatusReporter.getMessageBusStatus().getJsonPublishedMessagesPerMicroservice())
+            .add("messageSpeed", StatusReporter.getMessageBusStatus().getAverageSpeed())
+            .add("lastCommandTime", StatusReporter.getFieldAgentStatus().getLastCommandTime())
+            .add("tunnelStatus", StatusReporter.getSshManagerStatus().getJsonProxyStatus())
+            .add("version", getVersion())
+            .add("securityStatus", StatusReporter.getSecurityStatus().getStatus().toString())
+            .add("securityViolationInfo", StatusReporter.getSecurityStatus().getSecurityViolationInfo())
+            .add("isReadyToUpgrade", isReadyToUpgrade())
+            .add("isReadyToRollback", isReadyToRollback())
+            .build();
     }
 
     /**
@@ -318,8 +318,7 @@ public class FieldAgent implements IOFogModule {
                         }
 
                         Tracker.getInstance().handleEvent(TrackingEventType.MICROSERVICE,
-                            loadMicroservicesJsonFile());
-                                TrackingInfoUtils.getMicroservicesInfo(loadMicroservicesJsonFile());
+                            TrackingInfoUtils.getMicroservicesInfo(loadMicroservicesJsonFile()));
                     }
                     if (changes.getBoolean("routing") || initialization) {
                         loadRoutes(false);
@@ -443,13 +442,13 @@ public class FieldAgent implements IOFogModule {
             for (int i = 0; i < registriesList.size(); i++) {
                 JsonObject registry = registriesList.getJsonObject(i);
                 Registry.RegistryBuilder registryBuilder = new Registry.RegistryBuilder()
-                        .setId(registry.getInt("id"))
-                        .setUrl(registry.getString("url"))
-                        .setIsPublic(registry.getBoolean("isPublic", false));
+                    .setId(registry.getInt("id"))
+                    .setUrl(registry.getString("url"))
+                    .setIsPublic(registry.getBoolean("isPublic", false));
                 if (!registry.getBoolean("isPublic", false)) {
                     registryBuilder.setUserName(registry.getString("username"))
-                            .setPassword(registry.getString("password"))
-                            .setUserEmail(registry.getString("userEmail"));
+                        .setPassword(registry.getString("password"))
+                        .setUserEmail(registry.getString("userEmail"));
 
                 }
                 registries.add(registryBuilder.build());
@@ -476,20 +475,20 @@ public class FieldAgent implements IOFogModule {
 
     private Map<String, Route> parseRoutesJson(JsonArray routesJson) {
         return IntStream.range(0, routesJson.size())
-               .boxed()
-               .map(routesJson::getJsonObject)
-               .map(routeJson -> {
-                   String producerMicroserviceUuid = routeJson.getString("microserviceUuid");
-                   boolean isLocalPublisher = routeJson.getBoolean("isLocal");
-                   ClientConfig connectorConsumerConfig = null;
-                   if (!isLocalPublisher) {
-                       connectorConsumerConfig = parseConnectorClientConfigJson(routeJson);
-                   }
-                   Producer producer = new Producer(producerMicroserviceUuid, isLocalPublisher, connectorConsumerConfig);
-                   List<Receiver> receivers = parseReceiversJson(routeJson);
-                   return new Route(producer, receivers);
-               })
-               .collect(toMap(route -> route.getProducer().getMicroserviceId(), Function.identity()));
+            .boxed()
+            .map(routesJson::getJsonObject)
+            .map(routeJson -> {
+                String producerMicroserviceUuid = routeJson.getString("microserviceUuid");
+                boolean isLocalPublisher = routeJson.getBoolean("isLocal");
+                ClientConfig connectorConsumerConfig = null;
+                if (!isLocalPublisher) {
+                    connectorConsumerConfig = parseConnectorClientConfigJson(routeJson);
+                }
+                Producer producer = new Producer(producerMicroserviceUuid, isLocalPublisher, connectorConsumerConfig);
+                List<Receiver> receivers = parseReceiversJson(routeJson);
+                return new Route(producer, receivers);
+            })
+            .collect(toMap(route -> route.getProducer().getMicroserviceId(), Function.identity()));
     }
 
     private ClientConfig parseConnectorClientConfigJson(JsonObject jsonObject) {
@@ -524,23 +523,24 @@ public class FieldAgent implements IOFogModule {
 
     private List<Receiver> parseReceiversJson(JsonObject jsonObject) {
         JsonArray receiversJson = jsonObject.getJsonArray("receivers");
-        return IntStream.range(0 , receiversJson.size())
-                .boxed()
-                .map(receiversJson::getJsonObject)
-                .map(receiverJson -> {
-                    String receiver = receiverJson.getString("microserviceUuid");
-                    boolean isLocalReceiver = receiverJson.getBoolean("isLocal");
-                    ClientConfig connectorProducerConfig = null;
-                    if (!isLocalReceiver) {
-                        connectorProducerConfig = parseConnectorClientConfigJson(receiverJson);
-                    }
-                    return new Receiver(receiver, isLocalReceiver, connectorProducerConfig);
-                })
-                .collect(toList());
+        return IntStream.range(0, receiversJson.size())
+            .boxed()
+            .map(receiversJson::getJsonObject)
+            .map(receiverJson -> {
+                String receiver = receiverJson.getString("microserviceUuid");
+                boolean isLocalReceiver = receiverJson.getBoolean("isLocal");
+                ClientConfig connectorProducerConfig = null;
+                if (!isLocalReceiver) {
+                    connectorProducerConfig = parseConnectorClientConfigJson(receiverJson);
+                }
+                return new Receiver(receiver, isLocalReceiver, connectorProducerConfig);
+            })
+            .collect(toList());
     }
 
     /**
      * gets list of microservice routings from file or IoFog controller
+     *
      * @param fromFile - load from file
      */
     private void loadRoutes(boolean fromFile) {
@@ -574,6 +574,7 @@ public class FieldAgent implements IOFogModule {
 
     /**
      * gets list of IoFog Connectors from file or IoFog controller
+     *
      * @param fromFile - load from file
      */
     private void loadConnectors(boolean fromFile) {
@@ -606,9 +607,7 @@ public class FieldAgent implements IOFogModule {
     }
 
     private JsonArray loadMicroservicesJsonFile() {
-        String filename = MICROSERVICE_FILE;
-        JsonArray microservicesJson = readFile(filesPath + filename);
-        return  microservicesJson;
+        return readFile(filesPath + MICROSERVICE_FILE);
     }
 
     /**
@@ -631,10 +630,10 @@ public class FieldAgent implements IOFogModule {
                     return loadMicroservices(false);
                 } else {
                     return IntStream.range(0, microservicesJson.size())
-                            .boxed()
-                            .map(microservicesJson::getJsonObject)
-                            .map(containerJsonObjectToMicroserviceFunction())
-                            .collect(toList());
+                        .boxed()
+                        .map(microservicesJson::getJsonObject)
+                        .map(containerJsonObjectToMicroserviceFunction())
+                        .collect(toList());
                 }
             } else {
                 JsonObject result = orchestrator.request("microservices", RequestType.GET, null, null);
@@ -642,10 +641,10 @@ public class FieldAgent implements IOFogModule {
                 saveFile(microservicesJson, filesPath + filename);
 
                 List<Microservice> microservices = IntStream.range(0, microservicesJson.size())
-                        .boxed()
-                        .map(microservicesJson::getJsonObject)
-                        .map(containerJsonObjectToMicroserviceFunction())
-                        .collect(toList());
+                    .boxed()
+                    .map(microservicesJson::getJsonObject)
+                    .map(containerJsonObjectToMicroserviceFunction())
+                    .collect(toList());
                 microserviceManager.setLatestMicroservices(microservices);
                 return microservices;
             }
@@ -673,13 +672,13 @@ public class FieldAgent implements IOFogModule {
             if (!portMappingValue.getValueType().equals(JsonValue.ValueType.NULL)) {
                 JsonArray portMappingObjs = (JsonArray) portMappingValue;
                 List<PortMapping> pms = portMappingObjs.size() > 0
-                        ? IntStream.range(0, portMappingObjs.size())
-                        .boxed()
-                        .map(portMappingObjs::getJsonObject)
-                        .map(portMapping -> new PortMapping(portMapping.getInt("portExternal"),
-                                portMapping.getInt("portInternal")))
-                        .collect(toList())
-                        : null;
+                    ? IntStream.range(0, portMappingObjs.size())
+                    .boxed()
+                    .map(portMappingObjs::getJsonObject)
+                    .map(portMapping -> new PortMapping(portMapping.getInt("portExternal"),
+                        portMapping.getInt("portInternal")))
+                    .collect(toList())
+                    : null;
 
                 microservice.setPortMappings(pms);
             }
@@ -688,14 +687,14 @@ public class FieldAgent implements IOFogModule {
             if (!volumeMappingValue.getValueType().equals(JsonValue.ValueType.NULL)) {
                 JsonArray volumeMappingObj = (JsonArray) volumeMappingValue;
                 List<VolumeMapping> vms = volumeMappingObj.size() > 0
-                        ? IntStream.range(0, volumeMappingObj.size())
-                        .boxed()
-                        .map(volumeMappingObj::getJsonObject)
-                        .map(volumeMapping -> new VolumeMapping(volumeMapping.getString("hostDestination"),
-                                volumeMapping.getString("containerDestination"),
-                                volumeMapping.getString("accessMode")))
-                        .collect(toList())
-                        : null;
+                    ? IntStream.range(0, volumeMappingObj.size())
+                    .boxed()
+                    .map(volumeMappingObj::getJsonObject)
+                    .map(volumeMapping -> new VolumeMapping(volumeMapping.getString("hostDestination"),
+                        volumeMapping.getString("containerDestination"),
+                        volumeMapping.getString("accessMode")))
+                    .collect(toList())
+                    : null;
 
                 microservice.setVolumeMappings(vms);
             }
@@ -813,10 +812,10 @@ public class FieldAgent implements IOFogModule {
     private void saveFile(JsonArray data, String filename) {
         String checksum = checksum(data.toString());
         JsonObject object = Json.createObjectBuilder()
-                .add("checksum", checksum)
-                .add("timestamp", lastGetChangesList)
-                .add("data", data)
-                .build();
+            .add("checksum", checksum)
+            .add("timestamp", lastGetChangesList)
+            .add("data", data)
+            .build();
         try (JsonWriter writer = Json.createWriter(new OutputStreamWriter(new FileOutputStream(filename), UTF_8))) {
             writer.writeObject(object);
         } catch (IOException e) {
@@ -861,7 +860,7 @@ public class FieldAgent implements IOFogModule {
             Map<String, Object> instanceConfig = new HashMap<>();
 
             if (!NETWORK_INTERFACE.getDefaultValue().equals(Configuration.getNetworkInterface()) &&
-                    !Configuration.getNetworkInterface().equals(networkInterface))
+                !Configuration.getNetworkInterface().equals(networkInterface))
                 instanceConfig.put(NETWORK_INTERFACE.getCommandName(), networkInterface);
 
             if (!Configuration.getDockerUrl().equals(dockerUrl))
@@ -939,23 +938,23 @@ public class FieldAgent implements IOFogModule {
         }
 
         JsonObject json = Json.createObjectBuilder()
-                .add(NETWORK_INTERFACE.getJsonProperty(), IOFogNetworkInterface.getNetworkInterface())
-                .add(DOCKER_URL.getJsonProperty(), Configuration.getDockerUrl())
-                .add(DISK_CONSUMPTION_LIMIT.getJsonProperty(), Configuration.getDiskLimit())
-                .add(DISK_DIRECTORY.getJsonProperty(), Configuration.getDiskDirectory())
-                .add(MEMORY_CONSUMPTION_LIMIT.getJsonProperty(), Configuration.getMemoryLimit())
-                .add(PROCESSOR_CONSUMPTION_LIMIT.getJsonProperty(), Configuration.getCpuLimit())
-                .add(LOG_DISK_CONSUMPTION_LIMIT.getJsonProperty(), Configuration.getLogDiskLimit())
-                .add(LOG_DISK_DIRECTORY.getJsonProperty(), Configuration.getLogDiskDirectory())
-                .add(LOG_FILE_COUNT.getJsonProperty(), Configuration.getLogFileCount())
-                .add(STATUS_FREQUENCY.getJsonProperty(), Configuration.getStatusFrequency())
-                .add(CHANGE_FREQUENCY.getJsonProperty(), Configuration.getChangeFrequency())
-                .add(DEVICE_SCAN_FREQUENCY.getJsonProperty(), Configuration.getDeviceScanFrequency())
-                .add(WATCHDOG_ENABLED.getJsonProperty(), Configuration.isWatchdogEnabled())
-                .add(GPS_MODE.getJsonProperty(), Configuration.getGpsMode().name().toLowerCase())
-                .add("latitude", latitude)
-                .add("longitude", longitude)
-                .build();
+            .add(NETWORK_INTERFACE.getJsonProperty(), IOFogNetworkInterface.getNetworkInterface())
+            .add(DOCKER_URL.getJsonProperty(), Configuration.getDockerUrl())
+            .add(DISK_CONSUMPTION_LIMIT.getJsonProperty(), Configuration.getDiskLimit())
+            .add(DISK_DIRECTORY.getJsonProperty(), Configuration.getDiskDirectory())
+            .add(MEMORY_CONSUMPTION_LIMIT.getJsonProperty(), Configuration.getMemoryLimit())
+            .add(PROCESSOR_CONSUMPTION_LIMIT.getJsonProperty(), Configuration.getCpuLimit())
+            .add(LOG_DISK_CONSUMPTION_LIMIT.getJsonProperty(), Configuration.getLogDiskLimit())
+            .add(LOG_DISK_DIRECTORY.getJsonProperty(), Configuration.getLogDiskDirectory())
+            .add(LOG_FILE_COUNT.getJsonProperty(), Configuration.getLogFileCount())
+            .add(STATUS_FREQUENCY.getJsonProperty(), Configuration.getStatusFrequency())
+            .add(CHANGE_FREQUENCY.getJsonProperty(), Configuration.getChangeFrequency())
+            .add(DEVICE_SCAN_FREQUENCY.getJsonProperty(), Configuration.getDeviceScanFrequency())
+            .add(WATCHDOG_ENABLED.getJsonProperty(), Configuration.isWatchdogEnabled())
+            .add(GPS_MODE.getJsonProperty(), Configuration.getGpsMode().name().toLowerCase())
+            .add("latitude", latitude)
+            .add("longitude", longitude)
+            .build();
 
         try {
             orchestrator.request("config", RequestType.PATCH, null, json);
@@ -1034,9 +1033,9 @@ public class FieldAgent implements IOFogModule {
     private JsonObject buildProvisionFailResponse(String message, Exception e) {
         logWarning("Provisioning failed - " + e.getMessage());
         return Json.createObjectBuilder()
-                .add("status", "failed")
-                .add("errorMessage", message)
-                .build();
+            .add("status", "failed")
+            .add("errorMessage", message)
+            .build();
     }
 
     /**
@@ -1175,8 +1174,8 @@ public class FieldAgent implements IOFogModule {
             StatusReporter.setResourceManagerStatus().setUsbConnectionsInfo(usbInfo);
 
             JsonObject json = Json.createObjectBuilder()
-                    .add("info", usbInfo)
-                    .build();
+                .add("info", usbInfo)
+                .build();
             try {
                 orchestrator.request(COMMAND_USB_INFO, RequestType.PUT, null, json);
             } catch (Exception e) {
@@ -1195,8 +1194,8 @@ public class FieldAgent implements IOFogModule {
             StatusReporter.setResourceManagerStatus().setHwInfo(hwInfo);
 
             JsonObject json = Json.createObjectBuilder()
-                    .add("info", hwInfo)
-                    .build();
+                .add("info", hwInfo)
+                .build();
 
             JsonObject jsonSendHWInfoResult = null;
             try {
@@ -1221,7 +1220,7 @@ public class FieldAgent implements IOFogModule {
         if (connection.isPresent()) {
             content = new StringBuilder();
             try (BufferedReader in = new BufferedReader(
-                    new InputStreamReader(connection.get().getInputStream(), UTF_8))) {
+                new InputStreamReader(connection.get().getInputStream(), UTF_8))) {
                 String inputLine;
                 content = new StringBuilder();
                 while ((inputLine = in.readLine()) != null) {
