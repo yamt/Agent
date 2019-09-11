@@ -107,6 +107,7 @@ public class ContainerManager {
 		microservice.setContainerIpAddress(docker.getContainerIpAddress(id));
 		LoggingService.logInfo(MODULE_NAME, "container is created \"" + microservice.getImageName() + "\"");
 		startContainer(microservice);
+		setMicroserviceStatus(microservice.getMicroserviceUuid(), MicroserviceState.RUNNING);
 		microservice.setRebuild(false);
 	}
 
