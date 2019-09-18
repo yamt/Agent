@@ -1,0 +1,114 @@
+/*******************************************************************************
+ * Copyright (c) 2019 Edgeworx, Inc.
+ * All rights reserved. This program and the accompanying materials
+ * are made available under the terms of the Eclipse Public License 2.0
+ * which accompanies this distribution, and is available at
+ * http://www.eclipse.org/legal/epl-v20.html
+ *
+ * Contributors:
+ * Saeid Baghbidi
+ * Kilton Hopkins
+ * Neha Naithani
+ *******************************************************************************/
+package org.eclipse.iofog.command_line.util;
+
+import org.junit.After;
+import org.junit.Before;
+import org.junit.Test;
+import org.junit.runner.RunWith;
+import org.powermock.core.classloader.annotations.PrepareForTest;
+import org.powermock.modules.junit4.PowerMockRunner;
+
+import java.util.ArrayList;
+import java.util.List;
+import java.util.function.Function;
+
+import static org.junit.Assert.*;
+/**
+ * @author nehanaithani
+ */
+@RunWith(PowerMockRunner.class)
+@PrepareForTest({CommandShellResultSet.class})
+public class CommandShellResultSetTest {
+    private CommandShellResultSet commandShellResultSet;
+    List<String> value;
+    List<String> errors;
+    @Before
+    public void setUp() throws Exception {
+        value = new ArrayList<>();
+        errors = new ArrayList<>();
+        commandShellResultSet = new CommandShellResultSet<>(value, errors);
+    }
+
+    @After
+    public void tearDown() throws Exception {
+        value = null;
+        errors = null;
+        commandShellResultSet = null;
+    }
+
+    @Test
+    public void getError() {
+        assertNotNull(commandShellResultSet.getError());
+    }
+
+    @Test
+    public void getValue() {
+        assertNotNull(commandShellResultSet.getValue());
+    }
+
+
+    @Test
+    public void toString1() {
+        assertNotNull(commandShellResultSet);
+    }
+
+    /**
+     * When objects are same
+     */
+    @Test
+    public void equalObjects() {
+        List<String> value1 = new ArrayList<>();
+        List<String> errors1 = new ArrayList<>();
+        CommandShellResultSet commandShellResultSetLocal = new CommandShellResultSet<>(value1, errors1);
+        assertTrue(commandShellResultSetLocal.equals(commandShellResultSet));
+    }
+
+    /**
+     * When objects are different
+     */
+    @Test
+    public void equalDifferent() {
+        List<String> value1 = new ArrayList<>();
+        value1.add("value");
+        List<String> errors1 = new ArrayList<>();
+        CommandShellResultSet commandShellResultSetLocal = new CommandShellResultSet<>(value1, errors1);
+        assertFalse(commandShellResultSetLocal.equals(commandShellResultSet));
+    }
+
+    /**
+     * When objects are same
+     */
+    @Test
+    public void hashCodeWhenSameObject() {
+        List<String> value1 = new ArrayList<>();
+        List<String> errors1 = new ArrayList<>();
+        CommandShellResultSet commandShellResultSetLocal = new CommandShellResultSet<>(value1, errors1);
+        assertEquals("HashCodes should be equal", commandShellResultSetLocal.hashCode(), commandShellResultSet.hashCode());
+
+    }
+
+    /**
+     * When objects are different
+     */
+    @Test
+    public void hashCodeWhenObjectNotSame() {
+        List<String> value1 = new ArrayList<>();
+        value1.add("value");
+        List<String> errors1 = new ArrayList<>();
+        errors1.add("error");
+        CommandShellResultSet commandShellResultSetLocal = new CommandShellResultSet<>(value1, errors1);
+        assertNotEquals("HashCodes should not be equal", commandShellResultSetLocal.hashCode(), commandShellResultSet.hashCode());
+
+    }
+}
